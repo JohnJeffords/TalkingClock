@@ -83,9 +83,10 @@ Full UX in [docs/DESIGN.md](docs/DESIGN.md).
 
 ## Name & package id
 
-Official name: **Talking Clock (OSS)** (decided 2026-07-15). Package id will
-be `io.github.<github-username>.talkingclock` (fill in when the GitHub repo
-is created — this convention lets F-Droid verify ownership trivially).
+Official name: **Talking Clock (OSS)** (decided 2026-07-15).
+Repository: <https://github.com/JohnJeffords/TalkingClock>.
+Package id: `io.github.johnjeffords.talkingclock` (the `io.github.<username>`
+convention lets F-Droid verify ownership trivially).
 
 ## License
 

@@ -3,6 +3,21 @@
 Short ADR-style records. Newest first. "Owner" = project owner (John),
 "CC" = Claude Code.
 
+## 2026-07-15 — D-018: Lean toolchain, no Android Studio, physical-device testing
+Owner has limited SSD space and no Android Studio. Local setup is
+command-line only: JDK 17 + Android SDK command-line tools + platform-tools
+(~4–5 GB total incl. Gradle caches, vs ~15–25 GB for Studio + emulator).
+No local emulator — testing is on the owner's own phone via adb (USB or
+wireless debugging), with the full emulator matrix running in GitHub
+Actions (free for public repos). Android Studio can be added later if a
+visual layout editor is ever missed; nothing in the project will depend
+on it (Gradle is the build system either way).
+
+## 2026-07-15 — D-017: Hosted on GitHub — github.com/JohnJeffords/TalkingClock
+Public from day one (owner approved). Resolves the GitHub-vs-Codeberg open
+question in favor of GitHub (Actions CI + AI-review action are GitHub-
+native). applicationId: `io.github.johnjeffords.talkingclock`.
+
 ## 2026-07-15 — D-016: Halfway announcement = actual remaining time, then "Halfway there"
 Owner choice: "Seven minutes, thirty seconds remaining. Halfway there." — the
 useful fact first, the flavor second. All such extras (start announcement,
@@ -92,11 +107,6 @@ the scope honest. Parked in DESIGN.md non-goals.
 
 ## Open questions for the owner
 
-- **GitHub username / applicationId** — needed before implementation
-  (`io.github.<username>.talkingclock`).
 - **Natural-language phrasing ("five past two")** — v1 English-only, or cut
   from v1 and ship Digits style only?
 - **Reference voice pack** — do we record/ship one (CC0), and whose voice?
-- **Where to host** — GitHub (easiest CI, and the AI-review action is
-  GitHub-native) vs Codeberg (FOSS-purist points). CI design assumes GitHub
-  Actions.
