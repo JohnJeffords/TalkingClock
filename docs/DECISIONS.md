@@ -3,6 +3,51 @@
 Short ADR-style records. Newest first. "Owner" = project owner (John),
 "CC" = Claude Code.
 
+## 2026-07-15 — D-016: Halfway announcement = actual remaining time, then "Halfway there"
+Owner choice: "Seven minutes, thirty seconds remaining. Halfway there." — the
+useful fact first, the flavor second. All such extras (start announcement,
+halfway, countdown, "Time's up") individually toggleable per schedule.
+
+## 2026-07-15 — D-015: Timer durations are typed, not preset chips; schedules are the presets
+Owner correction of D-001-era design: the user types the duration each time
+and the last-used duration stays pre-filled; "presets" on the Timer screen
+mean *announcement schedules*, not saved durations.
+
+## 2026-07-15 — D-014: Learning-first codebase + AI review in CI
+Owner is using the project to learn software development. Binding rules in
+CODE_STYLE.md: self-documenting names, beginner-level comment density
+(deliberately above industry norm), boring-standard structure, docs updated
+in the same PR (continuity across AI agents / context loss / new humans).
+CI gains an advisory AI review job (anthropics/claude-code-action) with a
+charter matching those rules.
+
+## 2026-07-15 — D-013: Ponytail (least-code) discipline adopted, adapted
+The owner's Roblox "ponytail" skill is adopted with its ladder (don't build →
+reuse codebase → reuse platform → data over code → extend, don't add) but its
+minimal-comments instinct **inverted** to satisfy D-014: minimal code,
+maximal explanation. See CODE_STYLE.md.
+
+## 2026-07-15 — D-012: Repo lives at C:\Users\johnc\Projects\TalkingClock
+Moved out of OneDrive (owner request) — OneDrive sync fights Gradle's build
+churn (file locks, pointless upload). Supersedes the location note in D-003.
+
+## 2026-07-15 — D-011: No bundled TTS engines
+Android TTS engines are separate apps by OS design (one engine serves every
+app system-wide, picked in system settings). Bundling eSpeak NG/RHVoice would
+add several MB (blowing the 4 MB budget), duplicate voices per app, and make
+us maintainers of an engine fork. Instead: detect the no-engine state and
+guide users to F-Droid's RHVoice/eSpeak NG. Revisit only if user feedback
+shows the install step loses people. (CC recommendation, owner asked.)
+
+## 2026-07-15 — D-010: Official name "Talking Clock (OSS)"
+Owner choice. Store listing name; `applicationId` remains
+`io.github.<username>.talkingclock`.
+
+## 2026-07-15 — D-009: Primary audience is time blindness / ADHD / memory issues
+Owner. The app is for people who run late because time turns invisible.
+Design consequences recorded at the top of DESIGN.md (≤ 2 taps to arm,
+never silently stop announcing, everything spoken is toggleable).
+
 ## 2026-07-15 — D-008: Voice pack format is our own zip+manifest spec
 No true industry standard exists for concatenative time announcements; the
 closest are Asterisk prompt sets (composable number atoms) and Rockbox voice
@@ -47,13 +92,11 @@ the scope honest. Parked in DESIGN.md non-goals.
 
 ## Open questions for the owner
 
-- **App name** — pick before Play/F-Droid submission (README has candidates);
-  also decides `applicationId` (`io.github.<username>.talkingclock`).
-- **Timer preset durations** — owner is still thinking about good defaults
-  (game-style). Current straw man: 1/3/5/10/15/20/30 min chips.
+- **GitHub username / applicationId** — needed before implementation
+  (`io.github.<username>.talkingclock`).
 - **Natural-language phrasing ("five past two")** — v1 English-only, or cut
   from v1 and ship Digits style only?
 - **Reference voice pack** — do we record/ship one (CC0), and whose voice?
-- **Where to host** — GitHub (easiest CI) vs Codeberg (FOSS-purist points,
-  F-Droid-adjacent culture). CI design assumes GitHub Actions; Woodpecker/
-  Codeberg CI port is possible but extra work.
+- **Where to host** — GitHub (easiest CI, and the AI-review action is
+  GitHub-native) vs Codeberg (FOSS-purist points). CI design assumes GitHub
+  Actions.

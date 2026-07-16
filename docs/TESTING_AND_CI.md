@@ -105,11 +105,35 @@ A dedicated `fdroid-compliance` CI job:
    (`diffoscope`); reproducibility is what lets F-Droid publish with our own
    signature later.
 
+## AI code review on every PR
+
+An AI reviewer runs on each pull request via the official
+[`anthropics/claude-code-action`](https://github.com/anthropics/claude-code-action)
+GitHub Action, posting review comments directly on the diff. Its review
+charter (checked into the repo as the action's prompt) mirrors this project's
+rules, in priority order:
+
+1. Correctness — especially the timekeeping rules (ARCHITECTURE.md) and
+   announcement scheduling edge cases.
+2. CODE_STYLE.md compliance — beginner-readable naming, the comment standard
+   ("would a new coder understand this file cold?"), least-code ladder
+   (does this PR build something the platform or codebase already provides?).
+3. Docs-in-same-PR rule — flag any change that makes DESIGN/ARCHITECTURE/
+   DECISIONS stale without updating them.
+4. F-Droid hygiene — new dependencies, license headers, permission creep
+   (belt-and-suspenders on top of the hard CI checks above).
+
+Notes: requires an `ANTHROPIC_API_KEY` repo secret (the one paid,
+non-FOSS-relevant piece of CI — it reviews the code, it never ships in it);
+advisory by default (doesn't block merge) so a human always makes the final
+call; skipped for docs-only PRs to save cost.
+
 ## Workflow layout
 
 ```
 .github/workflows/
   pr.yml        # unit + robolectric + roborazzi + lint/ktlint + apk-size + fdroid-compliance
+  ai-review.yml # Claude code review with the charter above (advisory)
   emulator.yml  # instrumented matrix (PR label / merge-queue + nightly)
   nightly.yml   # full matrix, macrobenchmark, reproducible-build diff, soak
   release.yml   # tag → build, checklist gate, artifacts for Play upload

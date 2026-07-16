@@ -138,6 +138,8 @@ Phrasebook (pure text)  →  Speaker interface  →  TtsSpeaker (system TTS)
 
 ## Coding practices
 
+- **CODE_STYLE.md governs everything here** — learning-first naming and
+  comment density, the least-code ladder, and the docs-in-same-PR rule.
 - Kotlin official style, enforced by **ktlint** (via Spotless) in CI; static
   analysis with Android Lint on `fatal` for correctness categories.
 - `domain/` stays Android-free (enforced by a lint/Konsist check) — this is

@@ -1,5 +1,15 @@
 # Product Design
 
+**Primary audience: people with time blindness, ADHD, or other memory issues**
+who lose track of time (especially while getting ready) and run late. Design
+consequences, applied throughout: announcements are the *point*, not a bonus;
+arming the speaking clock must take ≤ 2 taps from launch; the app must never
+silently stop announcing (state is always visible on screen and in the
+notification); and nothing ever depends on the user remembering to check the
+app — the app does the remembering. Every spoken feature is individually
+toggleable in Settings, because the difference between "helpful rhythm" and
+"noise" is personal.
+
 Three screens, one navigation drawer ("sandwich"/hamburger menu), one settings
 screen. Material 3, dynamic color where available, dark theme by default with a
 true-black (AMOLED) option.
@@ -81,20 +91,22 @@ time.
 │                              │
 │   [▶ Start]   [⟲ Reset]      │
 │                              │
-│  Presets: 1m 3m 5m 10m 15m + │   ← chips; + = new custom timer
-│                              │
-│  Announcements: Game style ▾ │
+│  Duration:  [ 15:00 ]  ✎     │   ← typed in; remembers last-used
+│  Announcements: Game style ▾ │   ← the "presets" are schedules, not durations
 │                              │
 │  [Clock] [Timer] [Stopwatch] │
 └──────────────────────────────┘
 ```
 
+- **Duration is typed in each time** via a simple numeric field/keypad — and
+  the **last-used duration stays filled in** for next time, so the common case
+  ("same 15 minutes as yesterday") is just: open, Start. There are no saved
+  duration presets; the *announcement schedules* are the presets (below).
 - **One active timer at a time** (by design — overlapping talking timers are
-  chaos). Starting a new one stops the current one after a confirm-snackbar
-  with Undo.
-- Controls: **Start/Pause** (same button), **Reset**, **preset chips**, and
-  **“+” to create a new timer** (duration picker; saved as a reusable preset).
-- Presets are editable: long-press a chip to rename/edit/delete.
+  chaos). Entering a new duration while one is running (the "new timer"
+  action) stops the current one after a confirm-snackbar with Undo.
+- Controls: **Start/Pause** (same button), **Reset**, and the duration field
+  (tapping it while a timer runs = the "new timer" flow above).
 - Runs in the foreground service; survives app swipe-away and screen-off. The
   notification shows remaining time with Pause/Reset actions.
 - When the timer ends: spoken "Time's up", a repeating chime for up to 60 s
@@ -116,7 +128,10 @@ plus a *final countdown*. Three built-ins, plus per-schedule editing:
 Spoken as "Five minutes remaining", "Thirty seconds remaining", then bare
 numbers for the countdown, then "Time's up". A start announcement ("Timer
 started: fifteen minutes") is a toggle. A **"halfway there"** checkpoint is
-available in the editor because it's fun.
+available too, and it plays *after* the actual time remaining at that moment:
+"Seven minutes, thirty seconds remaining. Halfway there." Like everything
+spoken, each of these (start announcement, halfway, final countdown, even
+"Time's up" itself) is individually toggleable per schedule.
 
 Checkpoints fire on the announcer service's second-tick, so they're accurate
 to well under a second — good enough for speech, which itself takes ~1 s to
@@ -181,8 +196,9 @@ Grouped, searchable-by-eyeball, one screen with sections:
 - Hourly chime: Off / Chime / Speak the hour (a classic; aligned to the hour)
 
 **Timer**
-- Manage presets · Manage announcement schedules (edit checkpoints)
-- Start announcement (on) · End-of-timer sound: Speech only / Chime / Both
+- Manage announcement schedules (edit checkpoints; per-schedule toggles for
+  start announcement, halfway-there, final countdown, "Time's up")
+- End-of-timer sound: Speech only / Chime / Both
 - Overtime mode (off)
 
 **Stopwatch**
