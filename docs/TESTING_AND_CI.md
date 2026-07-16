@@ -128,6 +128,13 @@ non-FOSS-relevant piece of CI — it reviews the code, it never ships in it);
 advisory by default (doesn't block merge) so a human always makes the final
 call; skipped for docs-only PRs to save cost.
 
+Model: **Claude Opus 4.8** (`claude-opus-4-8`) at `high` effort — the
+standard tier for code review quality (as of 2026-07; revisit when new
+models ship). The charter must tell it to *report every finding with a
+confidence level* rather than self-filter for severity: current Claude
+models follow "only report serious issues" instructions literally and
+silently drop borderline findings, which quietly lowers recall.
+
 ## Workflow layout
 
 ```
