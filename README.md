@@ -58,6 +58,8 @@ Full UX in [docs/DESIGN.md](docs/DESIGN.md).
 
 | Doc | Contents |
 |---|---|
+| [CLAUDE.md](CLAUDE.md) | Entry point for AI agents: read order, hard rules, verification commands |
+| [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) | Build order (M0–M8) with per-milestone definition of done + dev-env setup |
 | [docs/DESIGN.md](docs/DESIGN.md) | Product design: screens, settings, announcement phrasing, feature list |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Tech stack, code structure, timekeeping rules, performance & size budgets |
 | [docs/CODE_STYLE.md](docs/CODE_STYLE.md) | Coding rules: learning-first commenting, naming, and the "least code" ladder |
