@@ -1,0 +1,19 @@
+# Android / Gradle (ready for when implementation starts)
+*.iml
+.gradle/
+.idea/
+.kotlin/
+local.properties
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
