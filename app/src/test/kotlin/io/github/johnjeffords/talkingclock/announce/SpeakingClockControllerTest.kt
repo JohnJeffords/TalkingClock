@@ -50,13 +50,16 @@ class SpeakingClockControllerTest {
     private val startAt = LocalDateTime.of(2000, 1, 1, 10, 0, 7)
     private val clock = MutableClock(startAt.toInstant(ZoneOffset.UTC), ZoneOffset.UTC)
     private val speaker = FakeSpeaker()
-    private val serviceCalls = mutableListOf<Boolean>()
+
+    /** Times the controller poked "make sure the service is up". Stopping
+     *  is the service's own decision, so there is no stop signal to count. */
+    private var servicePokes = 0
 
     private fun TestScope.buildController() = SpeakingClockController(
         clock = clock,
         speaker = speaker,
         scope = backgroundScope,
-        setServiceRunning = { running -> serviceCalls += running },
+        ensureServiceRunning = { servicePokes++ },
     )
 
     /** Advance wall clock and coroutine scheduler together, 1 s at a time. */
@@ -109,7 +112,7 @@ class SpeakingClockControllerTest {
         assertEquals(emptyList<String>(), speaker.spoken)
         assertFalse(controller.state.value.isArmed)
         assertNull(controller.state.value.nextAt)
-        assertEquals(listOf(true, false), serviceCalls)
+        assertEquals(1, servicePokes) // armed once; the service stops itself
     }
 
     @Test
@@ -123,7 +126,7 @@ class SpeakingClockControllerTest {
         advanceSeconds(3 * 60)
         assertEquals(2, speaker.spoken.size)
         assertFalse(controller.state.value.isArmed)
-        assertEquals(listOf(true, false), serviceCalls)
+        assertEquals(1, servicePokes)
     }
 
     @Test
@@ -161,6 +164,6 @@ class SpeakingClockControllerTest {
         assertTrue(state.isArmed)
         assertEquals(LocalDateTime.of(2000, 1, 1, 10, 5, 0), state.nextAt)
         assertEquals(startAt.plusMinutes(60), state.autoOffAt)
-        assertEquals(listOf(true), serviceCalls)
+        assertEquals(1, servicePokes)
     }
 }

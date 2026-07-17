@@ -160,6 +160,39 @@ class PhrasebookTest {
         )
     }
 
+    // --- Timer phrases ---
+
+    @Test
+    fun `timer remaining phrases read naturally`() {
+        assertEquals("Five minutes remaining", Phrasebook.timerRemaining(java.time.Duration.ofMinutes(5)))
+        assertEquals("Thirty seconds remaining", Phrasebook.timerRemaining(java.time.Duration.ofSeconds(30)))
+        assertEquals("One minute remaining", Phrasebook.timerRemaining(java.time.Duration.ofMinutes(1)))
+        assertEquals(
+            "One minute, thirty seconds remaining",
+            Phrasebook.timerRemaining(java.time.Duration.ofSeconds(90)),
+        )
+    }
+
+    @Test
+    fun `halfway says the real time first`() {
+        assertEquals(
+            "Seven minutes, thirty seconds remaining. Halfway there",
+            Phrasebook.timerHalfway(java.time.Duration.ofSeconds(7 * 60 + 30)),
+        )
+    }
+
+    @Test
+    fun `timer started announces the duration`() {
+        assertEquals(
+            "Timer started: fifteen minutes",
+            Phrasebook.timerStarted(java.time.Duration.ofMinutes(15)),
+        )
+        assertEquals(
+            "Timer started: one hour, thirty minutes",
+            Phrasebook.timerStarted(java.time.Duration.ofMinutes(90)),
+        )
+    }
+
     // --- Number words ---
 
     @Test

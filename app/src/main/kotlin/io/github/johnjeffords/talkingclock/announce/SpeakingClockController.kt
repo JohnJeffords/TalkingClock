@@ -28,10 +28,13 @@ import java.time.LocalDateTime
  * The controller deliberately knows nothing about Android services. Keeping
  * the process alive with the screen off requires a foreground service, but
  * that's a *platform obligation*, not announcing logic — so the controller
- * only calls [setServiceRunning] (a lambda; the real one starts/stops
- * AnnouncerService, tests pass a no-op) and the service is a thin shell.
- * This split is what lets the entire announce/auto-off lifecycle run under
- * a virtual-time test with a fake speaker (SpeakingClockControllerTest).
+ * only pokes [ensureServiceRunning] when armed (a lambda; the real one
+ * starts AnnouncerService, tests pass a no-op). Stopping is the SERVICE's
+ * decision: it watches every controller and stops itself when all are idle
+ * — if the controllers stopped it directly, the timer finishing would kill
+ * the service out from under a still-armed speaking clock (or vice versa).
+ * This split is also what lets the entire announce/auto-off lifecycle run
+ * under a virtual-time test with a fake speaker (SpeakingClockControllerTest).
  *
  * Timing approach: sleep in short slices (≤ [MAX_SLICE] at a time),
  * recomputing everything from the injected [clock] on each wake. The
@@ -43,7 +46,7 @@ class SpeakingClockController(
     private val clock: Clock,
     private val speaker: Speaker,
     private val scope: CoroutineScope,
-    private val setServiceRunning: (Boolean) -> Unit,
+    private val ensureServiceRunning: () -> Unit,
 ) {
 
     /** Announcing state, as observed by the UI and the notification. */
@@ -86,20 +89,21 @@ class SpeakingClockController(
             nextAt = nextAnnouncementTime(now, interval),
             autoOffAt = now.plus(autoOff),
         )
-        setServiceRunning(true)
+        ensureServiceRunning()
 
         // One announce loop at a time: replace, never stack.
         announceJob?.cancel()
         announceJob = scope.launch { announceLoop() }
     }
 
-    /** Turn the speaking clock off (user action, auto-off, or fatal error). */
+    /** Turn the speaking clock off (user action, auto-off, or fatal error).
+     *  The service notices the idle state itself and stops when nothing
+     *  else (e.g. a running timer) still needs it. */
     fun disarm() {
         announceJob?.cancel()
         announceJob = null
         speaker.stop()
         stateFlow.value = State()
-        setServiceRunning(false)
     }
 
     /**
@@ -131,13 +135,15 @@ class SpeakingClockController(
 
             // Boundary reached — announce THIS moment's time. Sub-minute
             // intervals include seconds, otherwise four identical
-            // announcements per minute would be useless.
+            // announcements per minute would be useless. Clock priority:
+            // yields to timer cues if both land on the same instant.
             speaker.speak(
                 Phrasebook.timeAnnouncement(
                     time = now.toLocalTime(),
                     style = SpeakingStyle.Conversational, // setting arrives in M6
                     includeSeconds = interval.seconds < 60,
                 ),
+                Speaker.PRIORITY_CLOCK,
             )
             stateFlow.value = st.copy(nextAt = nextAnnouncementTime(now, interval))
         }

@@ -28,6 +28,15 @@
     <string name="notif_speaking_body">Every %1$s · next at %2$s · tap to stop</string>
     <string name="notif_action_stop">Stop</string>
     <string name="notif_action_open">Open</string>
+    <string name="notif_action_pause">Pause</string>
+    <string name="notif_action_resume">Resume</string>
+
+    <!-- Timer notification -->
+    <string name="notif_timer_title">Timer</string>
+    <string name="notif_timer_remaining">%1$s remaining</string>
+    <string name="notif_timer_paused">Paused · %1$s remaining</string>
+    <string name="notif_timer_overtime">Time\'s up · %1$s over</string>
+    <string name="notif_timer_done">Time\'s up</string>
 
     <!-- Armed speaking-clock UI -->
     <string name="clock_announcing_chip">Announcing %1$s</string>

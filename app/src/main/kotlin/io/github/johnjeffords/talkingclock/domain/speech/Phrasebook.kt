@@ -89,6 +89,50 @@ object Phrasebook {
         }
     }
 
+    // --- Timer phrases -------------------------------------------------------
+
+    /**
+     * "Five minutes remaining" / "Thirty seconds remaining" /
+     * "One minute, thirty seconds remaining". Used for schedule checkpoints.
+     */
+    fun timerRemaining(remaining: java.time.Duration): String {
+        val phrase = durationWords(remaining)
+        return "${phrase.replaceFirstChar(Char::uppercase)} remaining"
+    }
+
+    /** The halfway cue — the real time first, then the flavor (D-016). */
+    fun timerHalfway(remaining: java.time.Duration): String =
+        "${timerRemaining(remaining)}. Halfway there"
+
+    /** "Timer started: fifteen minutes." */
+    fun timerStarted(duration: java.time.Duration): String =
+        "Timer started: ${durationWords(duration)}"
+
+    /** The end-of-timer announcement. */
+    const val TIMES_UP = "Time's up"
+
+    /**
+     * A duration in words: "fifteen minutes", "one minute, thirty seconds",
+     * "two hours", "one hour, five minutes". Durations over 59 s in any unit
+     * spill into the next, matching how people actually say them.
+     */
+    fun durationWords(duration: java.time.Duration): String {
+        require(!duration.isNegative) { "durationWords needs a non-negative duration" }
+        val hours = duration.toHours()
+        val minutes = duration.toMinutes() % 60
+        val seconds = duration.seconds % 60
+
+        val parts = mutableListOf<String>()
+        if (hours > 0) parts += unit(hours.toInt(), "hour")
+        if (minutes > 0) parts += unit(minutes.toInt(), "minute")
+        if (seconds > 0 || parts.isEmpty()) parts += unit(seconds.toInt(), "second")
+        return parts.joinToString(", ")
+    }
+
+    /** "one minute" / "five minutes" — number words + pluralized unit. */
+    private fun unit(n: Int, unitName: String): String =
+        "${numberWords(n)} $unitName${if (n == 1) "" else "s"}"
+
     // --- Number-to-words (0..59 is all a clock needs) -----------------------
 
     private val ones = listOf(

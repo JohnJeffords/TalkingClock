@@ -58,15 +58,16 @@ class TtsSpeaker(
             onInitResult(status)
         }
         // Fires as each utterance actually starts/finishes/errors — this is
-        // where audio focus is released, so other audio un-ducks exactly when
-        // the speech ends rather than when it was requested.
+        // where audio focus is released (so other audio un-ducks exactly when
+        // the speech ends, not when it was requested) and where the priority
+        // gate resets so any next line may speak.
         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) = Unit
-            override fun onDone(utteranceId: String?) = abandonFocus()
+            override fun onDone(utteranceId: String?) = onUtteranceEnded()
 
             @Deprecated("Platform still requires overriding this variant")
-            override fun onError(utteranceId: String?) = abandonFocus()
-            override fun onError(utteranceId: String?, errorCode: Int) = abandonFocus()
+            override fun onError(utteranceId: String?) = onUtteranceEnded()
+            override fun onError(utteranceId: String?, errorCode: Int) = onUtteranceEnded()
         })
     }
 
@@ -93,22 +94,38 @@ class TtsSpeaker(
         }
     }
 
-    override fun speak(text: String) {
+    /** Priority of the utterance currently playing (see [Speaker.speak]). */
+    private var speakingPriority = Int.MIN_VALUE
+
+    override fun speak(text: String, priority: Int) {
         // Drop (never queue, never crash) unless the engine is ready.
         if (stateFlow.value != SpeakerState.Ready) return
 
+        // The collision rule: a lower-priority line never interrupts a
+        // higher-priority one — it's dropped, not delayed (a late
+        // announcement is a wrong announcement).
+        if (tts.isSpeaking && priority < speakingPriority) return
+
+        speakingPriority = priority
         requestFocus()
         tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, UTTERANCE_ID)
     }
 
     override fun stop() {
         tts.stop()
+        speakingPriority = Int.MIN_VALUE
         abandonFocus()
     }
 
     override fun shutdown() {
         tts.stop()
         tts.shutdown()
+        abandonFocus()
+    }
+
+    /** An utterance finished (or died): release focus, open the gate. */
+    private fun onUtteranceEnded() {
+        speakingPriority = Int.MIN_VALUE
         abandonFocus()
     }
 

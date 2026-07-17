@@ -20,13 +20,21 @@ class FakeSpeaker(
     /** Every text passed to [speak], in order. */
     val spoken = mutableListOf<String>()
 
+    /** The priority each [spoken] entry arrived with, same order. */
+    val spokenPriorities = mutableListOf<Int>()
+
     /** How many times [stop] was called. */
     var stopCount = 0
         private set
 
-    override fun speak(text: String) {
-        // Mirror the real contract: drop unless Ready.
-        if (stateFlow.value == SpeakerState.Ready) spoken += text
+    override fun speak(text: String, priority: Int) {
+        // Mirror the real contract: drop unless Ready. (The fake records
+        // rather than plays, so the priority collision rule doesn't apply —
+        // tests assert on the recorded priorities instead.)
+        if (stateFlow.value == SpeakerState.Ready) {
+            spoken += text
+            spokenPriorities += priority
+        }
     }
 
     override fun stop() {

@@ -17,21 +17,39 @@ interface Speaker {
     val state: StateFlow<SpeakerState>
 
     /**
-     * Speak [text] aloud, interrupting anything currently being spoken.
-     * A talking clock must never queue stale announcements behind new ones —
-     * saying the OLD time after the minute has rolled over is worse than
-     * saying nothing — so replace-don't-queue is the only mode offered.
+     * Speak [text] aloud. Never queues: a talking clock must never say a
+     * STALE time behind a new one, so an utterance either replaces what's
+     * playing or is dropped — decided by [priority]:
+     *
+     *  - equal or higher priority than what's playing → replace it;
+     *  - lower priority → dropped entirely.
+     *
+     * That one rule implements the design's collision law ("if both want to
+     * speak at once, timer wins, stopwatch drops that line"): the timer
+     * speaks at [PRIORITY_TIMER], the clock at [PRIORITY_CLOCK], the
+     * stopwatch at [PRIORITY_STOPWATCH].
      *
      * Safe to call in any state; if the engine isn't [SpeakerState.Ready]
      * the request is simply dropped (never crashes, never queues).
      */
-    fun speak(text: String)
+    fun speak(text: String, priority: Int = PRIORITY_CLOCK)
 
     /** Stop mid-utterance (e.g. the user hit Stop). No-op when silent. */
     fun stop()
 
     /** Release the engine. Call when the owning scope is done with speech. */
     fun shutdown()
+
+    companion object {
+        /** Stopwatch lines lose every collision (design rule). */
+        const val PRIORITY_STOPWATCH = 0
+
+        /** Regular speaking-clock announcements and tap-to-speak. */
+        const val PRIORITY_CLOCK = 1
+
+        /** Timer cues — checkpoints, the countdown, "Time's up" — win. */
+        const val PRIORITY_TIMER = 2
+    }
 }
 
 /** The speech engine's lifecycle, as UIs see it. */
