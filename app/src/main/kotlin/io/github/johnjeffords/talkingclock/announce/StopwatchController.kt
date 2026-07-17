@@ -1,7 +1,5 @@
 package io.github.johnjeffords.talkingclock.announce
 
-import io.github.johnjeffords.talkingclock.domain.speech.Phrasebook
-import io.github.johnjeffords.talkingclock.domain.stopwatch.StopwatchCue
 import io.github.johnjeffords.talkingclock.domain.stopwatch.StopwatchEngine
 import io.github.johnjeffords.talkingclock.domain.stopwatch.stopwatchCuesBetween
 import io.github.johnjeffords.talkingclock.speech.Announcer
@@ -22,8 +20,8 @@ import java.time.Duration
  * the other two; see SpeakingClockController's class doc for the pattern).
  *
  * It speaks the ascending milestones ([stopwatchCuesBetween]) as it counts
- * up — "one, two, three, four, five", then "Ten seconds", "Thirty seconds",
- * "One minute"… — ON by default (the whole point of a talking stopwatch),
+ * up — "One second", "Two seconds"… "Five seconds", then "Ten seconds",
+ * "Thirty seconds", "One minute"… — ON by default (a talking stopwatch),
  * with a settings toggle. Spoken laps on the Lap press are a separate,
  * off-by-default option. Everything here speaks at [Speaker
  * .PRIORITY_STOPWATCH], which LOSES every collision (a stopwatch line never
@@ -153,20 +151,15 @@ class StopwatchController(
             // to LAND on the milestone despite TTS latency.
             val now = stateFlow.value.snapshot.elapsed + speechLead
             if (stateFlow.value.speakElapsed && !isQuietNow()) {
-                stopwatchCuesBetween(prevElapsed, now).forEach(::announceCue)
+                stopwatchCuesBetween(prevElapsed, now).forEach { mark ->
+                    announcer.announce(
+                        Utterance.StopwatchElapsed(mark),
+                        Speaker.PRIORITY_STOPWATCH,
+                    )
+                }
             }
             prevElapsed = now
         }
-    }
-
-    /** Speak one milestone: bare numbers for the opening count, the reached
-     *  elapsed time otherwise. */
-    private fun announceCue(cue: StopwatchCue) {
-        val utterance = when (cue) {
-            is StopwatchCue.Count -> Utterance.Raw(Phrasebook.numberWords(cue.number))
-            is StopwatchCue.Elapsed -> Utterance.StopwatchElapsed(cue.at)
-        }
-        announcer.announce(utterance, Speaker.PRIORITY_STOPWATCH)
     }
 
     private fun publish() {

@@ -47,7 +47,8 @@ class StopwatchControllerTest {
         advance(Duration.ofSeconds(65))
         assertEquals(
             listOf(
-                "one", "two", "three", "four", "five", // the opening count-up
+                // The opening seconds, spoken as full elapsed phrases.
+                "One second", "Two seconds", "Three seconds", "Four seconds", "Five seconds",
                 "Ten seconds",
                 "Thirty seconds",
                 "One minute",
@@ -65,11 +66,17 @@ class StopwatchControllerTest {
         controller.start()
 
         advance(Duration.ofMillis(8_900)) // just before the early 10 s cue
-        assertEquals(listOf("one", "two", "three", "four", "five"), speaker.spoken)
+        assertEquals(
+            listOf("One second", "Two seconds", "Three seconds", "Four seconds", "Five seconds"),
+            speaker.spoken,
+        )
 
         advance(Duration.ofMillis(200)) // elapsed crosses 9 s -> 10 s cue, 1 s early
         assertEquals(
-            listOf("one", "two", "three", "four", "five", "Ten seconds"),
+            listOf(
+                "One second", "Two seconds", "Three seconds", "Four seconds", "Five seconds",
+                "Ten seconds",
+            ),
             speaker.spoken,
         )
     }
@@ -112,18 +119,17 @@ class StopwatchControllerTest {
         val controller = buildController()
         controller.start()
         advance(Duration.ofSeconds(6)) // crosses 1..5
-        assertEquals(listOf("one", "two", "three", "four", "five"), speaker.spoken)
+        val opening =
+            listOf("One second", "Two seconds", "Three seconds", "Four seconds", "Five seconds")
+        assertEquals(opening, speaker.spoken)
 
         controller.pause()
         advance(Duration.ofMinutes(5)) // silence while paused
-        assertEquals(listOf("one", "two", "three", "four", "five"), speaker.spoken)
+        assertEquals(opening, speaker.spoken)
 
         controller.resume()
         advance(Duration.ofSeconds(5)) // elapsed 6 -> 11 s, crosses 10 s
-        assertEquals(
-            listOf("one", "two", "three", "four", "five", "Ten seconds"),
-            speaker.spoken,
-        )
+        assertEquals(opening + "Ten seconds", speaker.spoken)
         assertEquals(StopwatchEngine.Phase.Running, controller.state.value.snapshot.phase)
     }
 }
