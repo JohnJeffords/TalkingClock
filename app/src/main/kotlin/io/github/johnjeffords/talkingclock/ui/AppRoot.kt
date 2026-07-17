@@ -159,7 +159,7 @@ fun TalkingClockRoot() {
                     onTest = { settingsViewModel.previewSpeech() },
                     onInstallEngine = {
                         context.startActivity(
-                            Intent(Intent.ACTION_VIEW, RHVOICE_FDROID_URL.toUri()),
+                            Intent(Intent.ACTION_VIEW, VOICE_ENGINE_FDROID_URL.toUri()),
                         )
                     },
                     modifier = padding,
@@ -337,6 +337,12 @@ private fun SettingsScaffold(
 private const val REPO_URL = "https://github.com/JohnJeffords/TalkingClock"
 private const val ISSUES_URL = "https://github.com/JohnJeffords/TalkingClock/issues"
 
-/** F-Droid page for RHVoice, the friendliest FOSS TTS engine to recommend. */
-const val RHVOICE_FDROID_URL =
-    "https://f-droid.org/packages/com.github.olga_yakovleva.rhvoice.android/"
+/**
+ * F-Droid page for the recommended FOSS speech engine. SherpaTTS is a proper
+ * system TTS engine (GPL-3.0, on F-Droid) with natural-sounding neural voices
+ * — a big step up from RHVoice's robotic quality. It fetches a voice model
+ * once on first use, then runs fully offline. (Users who want the tiniest
+ * option can still pick eSpeak NG from F-Droid.)
+ */
+const val VOICE_ENGINE_FDROID_URL =
+    "https://f-droid.org/packages/org.woheller69.ttsengine/"

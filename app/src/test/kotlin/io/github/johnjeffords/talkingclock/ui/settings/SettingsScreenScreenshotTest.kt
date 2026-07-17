@@ -56,6 +56,38 @@ class SettingsScreenScreenshotTest {
     }
 
     @Test
+    fun settings_main_light() {
+        // Light theme specifically: the amber section headers ("Clock",
+        // "Voice"…) and chevrons must be legible on the near-white background
+        // (the contrast bug). Guards the deep-amber light-theme primary.
+        composeRule.setContent {
+            TalkingClockTheme(ThemeChoice.Light) {
+                Surface(
+                    color = MaterialTheme.colorScheme.background,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    SettingsScreen(
+                        settings = SettingsRepository.Settings(),
+                        onSetTheme = {},
+                        onSetTimeFormat = {},
+                        onSetShowSeconds = {},
+                        onSetShowDate = {},
+                        onSetAutoOff = {},
+                        onSetTimerSchedule = {},
+                        onSetStopwatchAnnounceEvery = {},
+                        onSetStopwatchSpeakLaps = {},
+                        onOpenVoice = {},
+                        onOpenSpeakingStyle = {},
+                        onOpenQuietHours = {},
+                        onOpenAbout = {},
+                    )
+                }
+            }
+        }
+        composeRule.onRoot().captureRoboImage("src/test/screenshots/settings_main_light.png")
+    }
+
+    @Test
     fun quiet_hours_dark() {
         composeRule.setContent {
             TalkingClockTheme(ThemeChoice.Dark) {

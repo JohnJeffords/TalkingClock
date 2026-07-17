@@ -107,6 +107,15 @@ class StopwatchController(
     }
 
     /**
+     * The live elapsed time, read straight off the monotonic clock right now
+     * — not the last published snapshot. The display uses this to redraw the
+     * tenths every frame so the readout is never up to a tick stale (which
+     * reads as "slightly slow"); the 100 ms [tickLoop] is enough for the
+     * announcements and the notification, but not for a crisp counter.
+     */
+    fun currentElapsed(): Duration = engine.snapshot().elapsed
+
+    /**
      * Sample at 100 ms while running — the tenths digit on screen updates
      * that fast, and nothing runs at all once paused/reset. The every-N
      * announcement uses the crossed-a-multiple rule (same idea as the

@@ -29,6 +29,24 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!--
+      REQUIRED for text-to-speech to work at all on Android 11+ (API 30+).
+      Since API 30, "package visibility" filtering hides other apps from us
+      unless we declare that we intend to interact with them. A text-to-
+      speech engine (SherpaTTS, RHVoice, eSpeak NG, Google TTS, …) is a
+      separate app exposing a TTS_SERVICE; without this <queries> block the
+      OS makes those services invisible, so TextToSpeech.getEngines() comes
+      back empty and — worse — TextToSpeech can't bind to the engine, its
+      init reports failure, and we wrongly conclude "no engine installed."
+      This is exactly the MVP: the clock must speak through the system TTS.
+      Do NOT remove (TtsSpeakerManifestTest guards it).
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+
     <application
         android:name=".TalkingClockApp"
         android:allowBackup="true"

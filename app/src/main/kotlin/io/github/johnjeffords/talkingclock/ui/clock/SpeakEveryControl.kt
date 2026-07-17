@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
+import io.github.johnjeffords.talkingclock.ui.theme.OnBrightAmber
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.johnjeffords.talkingclock.R
@@ -309,14 +310,17 @@ fun AnnouncingChip(
                 Modifier
                     .size(8.dp)
                     .alpha(dotAlpha)
-                    .background(MaterialTheme.colorScheme.onPrimary, CircleShape),
+                    // Fixed dark-on-amber, NOT onPrimary — the gradient is
+                    // bright amber in every theme, and light-mode onPrimary is
+                    // white (see OnBrightAmber's doc).
+                    .background(OnBrightAmber, CircleShape),
             )
             Spacer(Modifier.width(8.dp))
             Text(
                 text = stringResource(R.string.clock_announcing_chip, interval.spokenLabel),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = OnBrightAmber,
             )
         }
     }

@@ -19,9 +19,30 @@ import androidx.compose.ui.graphics.Color
  * red) live in [TcExtraColors] because they need light/dark variants too.
  */
 
-// --- Shared accent (identical across all three themes) ---
-private val Amber = Color(0xFFFFC24B)
-private val OnAmber = Color(0xFF2A1D00)
+// --- The amber accent ---
+// Bright amber reads beautifully on the DARK backgrounds, but as a text /
+// icon color on the LIGHT theme's near-white background it fails WCAG
+// contrast badly (~1.5:1 — you can barely see it). `primary` is used as a
+// foreground color in lots of places (section headers, the "speaking" chip
+// text, "Time's up", alarm "speaks" lines…), so light mode needs a DEEPER
+// amber that stays legible. Buttons then pair that deep amber fill with
+// white text, which is also high-contrast. Dark/AMOLED keep the bright
+// amber. (Accessibility is a hard requirement — docs/DESIGN.md — and it
+// wins over matching the exact hue in light mode.)
+private val Amber = Color(0xFFFFC24B)          // dark themes
+private val OnAmber = Color(0xFF2A1D00)         // dark text on bright amber
+private val AmberLight = Color(0xFF8A5A00)      // light theme: ~5.4:1 on the light bg
+private val OnAmberLight = Color(0xFFFFFFFF)    // white text on deep amber
+
+/**
+ * Foreground color for content sitting on the FIXED bright-amber fill — the
+ * "Announcing" status chip's `#FFC24B → #FFB020` gradient, which is bright in
+ * every theme. Such content must NOT use the theme's `onPrimary`: in light
+ * mode that's now white (it pairs with the deep-amber button fill), which
+ * would be illegible on bright amber. This dark brown pairs with bright amber
+ * in all three themes.
+ */
+val OnBrightAmber = Color(0xFF2A1D00)
 
 val TalkingClockDarkColors: ColorScheme = darkColorScheme(
     primary = Amber,
@@ -41,10 +62,10 @@ val TalkingClockDarkColors: ColorScheme = darkColorScheme(
 )
 
 val TalkingClockLightColors: ColorScheme = lightColorScheme(
-    primary = Amber,
-    onPrimary = OnAmber,
-    primaryContainer = Color(0xFFFFE7B3),
-    onPrimaryContainer = Color(0xFF4A3600),
+    primary = AmberLight,                    // deep amber — legible as text on white
+    onPrimary = OnAmberLight,                // white on the deep-amber button fill
+    primaryContainer = Color(0xFFFFE7B3),    // pale amber fill (armed control, chips)
+    onPrimaryContainer = Color(0xFF4A3600),  // dark text on the pale container
     background = Color(0xFFF5F3F1),
     onBackground = Color(0xFF1D1B1E),
     surface = Color(0xFFFFFFFF),

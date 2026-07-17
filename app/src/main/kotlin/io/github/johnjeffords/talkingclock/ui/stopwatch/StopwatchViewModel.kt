@@ -68,6 +68,9 @@ class StopwatchViewModel(
     fun lap() = controller.lap()
     fun reset() = controller.reset()
 
+    /** Live elapsed for the frame-driven readout (see StopwatchRoute). */
+    fun liveElapsed(): java.time.Duration = controller.currentElapsed()
+
     companion object {
         val Factory = viewModelFactory {
             initializer {

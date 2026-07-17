@@ -23,6 +23,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.johnjeffords.talkingclock.TalkingClockApp
 import io.github.johnjeffords.talkingclock.domain.announce.SpeakInterval
 import io.github.johnjeffords.talkingclock.speech.Utterance
+import io.github.johnjeffords.talkingclock.ui.VOICE_ENGINE_FDROID_URL
 import java.time.LocalTime
 
 /**
@@ -109,11 +110,11 @@ fun ClockRoute() {
             }
         },
         onInstallEngine = {
-            // Open RHVoice's F-Droid page in the browser. The intent is
-            // handled by the browser app — this app itself still makes no
-            // network requests and has no INTERNET permission.
+            // Open the recommended engine's F-Droid page in the browser. The
+            // intent is handled by the browser app — this app itself still
+            // makes no network requests and has no INTERNET permission.
             context.startActivity(
-                Intent(Intent.ACTION_VIEW, RHVOICE_FDROID_URL.toUri()),
+                Intent(Intent.ACTION_VIEW, VOICE_ENGINE_FDROID_URL.toUri()),
             )
         },
     )
@@ -132,7 +133,3 @@ fun ClockRoute() {
         )
     }
 }
-
-/** F-Droid page for RHVoice, the friendliest FOSS TTS engine to recommend. */
-private const val RHVOICE_FDROID_URL =
-    "https://f-droid.org/packages/com.github.olga_yakovleva.rhvoice.android/"

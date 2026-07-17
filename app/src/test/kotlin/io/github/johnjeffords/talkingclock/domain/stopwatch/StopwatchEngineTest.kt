@@ -71,6 +71,31 @@ class StopwatchEngineTest {
     }
 
     @Test
+    fun `one second of monotonic time is exactly one second elapsed`() {
+        engine.start()
+        advance(Duration.ofMillis(1000))
+        // Accuracy, stated bluntly: the readout tracks real time 1:1.
+        assertEquals(1000L, engine.snapshot().elapsed.toMillis())
+    }
+
+    @Test
+    fun `elapsed never drifts across many pause and resume cycles`() {
+        // The "is the stopwatch accurate?" guard the owner asked to keep in
+        // the build. 100 running stretches of 137 ms each, with a long paused
+        // gap between every one that must NOT be counted. If the engine ever
+        // accumulated per-tick or double-counted, this exact total would be
+        // off — it can't be, because elapsed is always DERIVED from anchors.
+        engine.start()
+        repeat(100) {
+            advance(Duration.ofMillis(137))
+            engine.pause()
+            advance(Duration.ofSeconds(9)) // paused: must not count
+            engine.resume()
+        }
+        assertEquals(137L * 100, engine.snapshot().elapsed.toMillis())
+    }
+
+    @Test
     fun `reset clears everything`() {
         engine.start()
         advance(Duration.ofSeconds(30))
