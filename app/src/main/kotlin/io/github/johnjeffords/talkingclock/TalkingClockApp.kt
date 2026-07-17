@@ -160,15 +160,20 @@ class TalkingClockApp : Application() {
                     alarmScheduler.schedule(alarm)
                 }
             },
-            onHandoff = { alarm ->
-                // The signature feature: dismiss -> the speaking clock runs
-                // while the user gets ready (design frame 24's amber card).
+            onArmSpeakingClock = { alarm ->
+                // The signature feature: the moment the alarm rings, the
+                // speaking clock starts and runs while the user gets ready
+                // (design frame 24's amber card). Auto-off ends it.
                 alarm.handoffIntervalSeconds?.let { seconds ->
                     speakingClockController.arm(
                         SpeakInterval(seconds),
                         autoOff = Duration.ofMinutes(alarm.handoffMinutes.toLong()),
                     )
                 }
+            },
+            onQuietSpeakingClock = {
+                // Snooze silences the handoff clock until the next ring.
+                speakingClockController.disarm()
             },
         )
 
@@ -221,11 +226,7 @@ class TalkingClockApp : Application() {
                 timerController.restoreLastDuration(
                     Duration.ofSeconds(settings.lastTimerDurationSeconds),
                 )
-                stopwatchController.setAnnounceEvery(
-                    settings.stopwatchAnnounceEverySeconds
-                        .takeIf { it > 0 }
-                        ?.let { Duration.ofSeconds(it.toLong()) },
-                )
+                stopwatchController.setSpeakElapsed(settings.stopwatchSpeakElapsed)
                 stopwatchController.setSpeakLaps(settings.stopwatchSpeakLaps)
                 ttsSpeaker.setRate(settings.ttsRate)
                 ttsSpeaker.setPitch(settings.ttsPitch)

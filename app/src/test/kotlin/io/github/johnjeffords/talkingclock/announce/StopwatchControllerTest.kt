@@ -13,7 +13,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Duration
 
-/** Virtual-time tests for the stopwatch controller's optional speech. */
+/** Virtual-time tests for the stopwatch's ascending milestone announcements. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class StopwatchControllerTest {
 
@@ -40,27 +40,38 @@ class StopwatchControllerTest {
     }
 
     @Test
-    fun `silent by default even across announce boundaries`() = runTest {
+    fun `speaks the ascending milestones by default`() = runTest {
         val controller = buildController()
         controller.start()
+
+        advance(Duration.ofSeconds(65))
+        assertEquals(
+            listOf(
+                "one", "two", "three", "four", "five", // the opening count-up
+                "Ten seconds",
+                "Thirty seconds",
+                "One minute",
+            ),
+            speaker.spoken,
+        )
+        // Stopwatch lines lose every collision (lowest priority).
+        assertTrue(speaker.spokenPriorities.all { it == Speaker.PRIORITY_STOPWATCH })
+    }
+
+    @Test
+    fun `speaking can be turned off`() = runTest {
+        val controller = buildController()
+        controller.setSpeakElapsed(false)
+        controller.start()
+
         advance(Duration.ofMinutes(2))
         assertEquals(emptyList<String>(), speaker.spoken)
     }
 
     @Test
-    fun `announces elapsed at each whole multiple when enabled`() = runTest {
-        val controller = buildController()
-        controller.setAnnounceEvery(Duration.ofSeconds(30))
-        controller.start()
-
-        advance(Duration.ofSeconds(65))
-        assertEquals(listOf("Thirty seconds", "One minute"), speaker.spoken)
-        assertTrue(speaker.spokenPriorities.all { it == Speaker.PRIORITY_STOPWATCH })
-    }
-
-    @Test
     fun `speaks laps when enabled`() = runTest {
         val controller = buildController()
+        controller.setSpeakElapsed(false) // isolate lap speech from the milestones
         controller.setSpeakLaps(true)
         controller.start()
         advance(Duration.ofSeconds(62))
@@ -72,6 +83,7 @@ class StopwatchControllerTest {
     @Test
     fun `laps are silent by default`() = runTest {
         val controller = buildController()
+        controller.setSpeakElapsed(false)
         controller.start()
         advance(Duration.ofSeconds(30))
         controller.lap()
@@ -80,18 +92,22 @@ class StopwatchControllerTest {
     }
 
     @Test
-    fun `pause stops announcements and resume continues`() = runTest {
+    fun `pause stops announcements and resume never repeats a milestone`() = runTest {
         val controller = buildController()
-        controller.setAnnounceEvery(Duration.ofSeconds(30))
         controller.start()
-        advance(Duration.ofSeconds(10))
+        advance(Duration.ofSeconds(6)) // crosses 1..5
+        assertEquals(listOf("one", "two", "three", "four", "five"), speaker.spoken)
+
         controller.pause()
         advance(Duration.ofMinutes(5)) // silence while paused
-        assertEquals(emptyList<String>(), speaker.spoken)
+        assertEquals(listOf("one", "two", "three", "four", "five"), speaker.spoken)
 
         controller.resume()
-        advance(Duration.ofSeconds(21)) // elapsed crosses 0:30
-        assertEquals(listOf("Thirty seconds"), speaker.spoken)
+        advance(Duration.ofSeconds(5)) // elapsed 6 -> 11 s, crosses 10 s
+        assertEquals(
+            listOf("one", "two", "three", "four", "five", "Ten seconds"),
+            speaker.spoken,
+        )
         assertEquals(StopwatchEngine.Phase.Running, controller.state.value.snapshot.phase)
     }
 }

@@ -59,7 +59,7 @@ fun SettingsScreen(
     onSetShowDate: (Boolean) -> Unit,
     onSetAutoOff: (Int) -> Unit,
     onSetTimerSchedule: (String) -> Unit,
-    onSetStopwatchAnnounceEvery: (Int) -> Unit,
+    onSetStopwatchSpeakElapsed: (Boolean) -> Unit,
     onSetStopwatchSpeakLaps: (Boolean) -> Unit,
     onOpenVoice: () -> Unit,
     onOpenSpeakingStyle: () -> Unit,
@@ -116,11 +116,12 @@ fun SettingsScreen(
         )
 
         SettingsSectionHeader(stringResource(R.string.settings_section_stopwatch))
-        SettingsNavRow(
+        SettingsSwitchRow(
             icon = Icons.Outlined.HourglassEmpty,
             title = stringResource(R.string.settings_sw_announce),
-            value = announceEveryLabel(settings.stopwatchAnnounceEverySeconds),
-            onClick = { openDialog = SettingsDialog.StopwatchAnnounce },
+            subtitle = stringResource(R.string.settings_sw_announce_subtitle),
+            checked = settings.stopwatchSpeakElapsed,
+            onCheckedChange = onSetStopwatchSpeakElapsed,
         )
         SettingsSwitchRow(
             icon = Icons.Outlined.Flag,
@@ -209,32 +210,13 @@ fun SettingsScreen(
             },
             onDismiss = { openDialog = null },
         )
-        SettingsDialog.StopwatchAnnounce -> ChoiceDialog(
-            title = stringResource(R.string.settings_sw_announce),
-            options = STOPWATCH_ANNOUNCE_CHOICES.map { announceEveryLabel(it) },
-            selectedIndex = STOPWATCH_ANNOUNCE_CHOICES
-                .indexOf(settings.stopwatchAnnounceEverySeconds),
-            onSelect = {
-                onSetStopwatchAnnounceEvery(STOPWATCH_ANNOUNCE_CHOICES[it])
-                openDialog = null
-            },
-            onDismiss = { openDialog = null },
-        )
         null -> Unit
     }
 }
 
-private enum class SettingsDialog { Theme, TimeFormat, AutoOff, TimerSchedule, StopwatchAnnounce }
+private enum class SettingsDialog { Theme, TimeFormat, AutoOff, TimerSchedule }
 
 private val AUTO_OFF_CHOICES = listOf(15, 30, 60, 120)
-private val STOPWATCH_ANNOUNCE_CHOICES = listOf(0, 30, 60, 300)
-
-@Composable
-private fun announceEveryLabel(seconds: Int): String = when (seconds) {
-    0 -> stringResource(R.string.settings_off)
-    in 1..59 -> "$seconds s"
-    else -> "${seconds / 60} min"
-}
 
 /** "22:00"-style label for a minutes-since-midnight value. */
 fun formatMinutes(minutesSinceMidnight: Int): String =

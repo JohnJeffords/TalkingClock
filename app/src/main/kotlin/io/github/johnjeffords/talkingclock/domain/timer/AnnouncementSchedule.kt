@@ -1,5 +1,6 @@
 package io.github.johnjeffords.talkingclock.domain.timer
 
+import io.github.johnjeffords.talkingclock.domain.announce.standardMarks
 import java.time.Duration
 
 /**
@@ -31,10 +32,21 @@ data class AnnouncementSchedule(
         private fun minutes(vararg m: Long) = m.map { Duration.ofMinutes(it) }
         private fun seconds(vararg s: Long) = s.map { Duration.ofSeconds(it) }
 
-        /** UT/TF2-style — the design's default. */
+        /**
+         * The default — the exact mirror of the stopwatch's ascending
+         * milestones ([standardMarks]), read as REMAINING as the timer
+         * counts down: … 10 min, 5 min, 4, 3, 2, 1 min, 30 s, 10 s, then the
+         * 5-4-3-2-1 countdown, then "Time's up". Only marks below the timer's
+         * duration fire, so the announcements naturally cluster near the end.
+         * (The sub-5-second marks are the countdown, so they're excluded from
+         * the checkpoint set here and handled by [countdownFrom].) A generous
+         * 24-hour bound precomputes every mark any realistic timer needs.
+         */
         val GAME = AnnouncementSchedule(
-            name = "Game style",
-            checkpoints = (minutes(30, 20, 10, 5, 3, 2, 1) + seconds(30, 20, 10)).toSet(),
+            name = "Milestones",
+            checkpoints = standardMarks(Duration.ofHours(24))
+                .filter { it.seconds > 5 }
+                .toSet(),
             countdownFrom = 5,
             halfway = false,
         )

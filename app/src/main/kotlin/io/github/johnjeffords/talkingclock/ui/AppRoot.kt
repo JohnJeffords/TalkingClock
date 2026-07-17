@@ -111,7 +111,7 @@ fun TalkingClockRoot() {
                     onSetShowDate = settingsViewModel::setShowDate,
                     onSetAutoOff = settingsViewModel::setAutoOffMinutes,
                     onSetTimerSchedule = settingsViewModel::setTimerScheduleName,
-                    onSetStopwatchAnnounceEvery = settingsViewModel::setStopwatchAnnounceEvery,
+                    onSetStopwatchSpeakElapsed = settingsViewModel::setStopwatchSpeakElapsed,
                     onSetStopwatchSpeakLaps = settingsViewModel::setStopwatchSpeakLaps,
                     onOpenVoice = { navController.navigate(Routes.VOICE) },
                     onOpenSpeakingStyle = { navController.navigate(Routes.SPEAKING_STYLE) },

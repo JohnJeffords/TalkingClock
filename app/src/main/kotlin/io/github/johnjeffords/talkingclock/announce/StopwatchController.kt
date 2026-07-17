@@ -1,6 +1,9 @@
 package io.github.johnjeffords.talkingclock.announce
 
+import io.github.johnjeffords.talkingclock.domain.speech.Phrasebook
+import io.github.johnjeffords.talkingclock.domain.stopwatch.StopwatchCue
 import io.github.johnjeffords.talkingclock.domain.stopwatch.StopwatchEngine
+import io.github.johnjeffords.talkingclock.domain.stopwatch.stopwatchCuesBetween
 import io.github.johnjeffords.talkingclock.speech.Announcer
 import io.github.johnjeffords.talkingclock.speech.Speaker
 import io.github.johnjeffords.talkingclock.speech.Utterance
@@ -18,10 +21,13 @@ import java.time.Duration
  * controllers (same singleton/Android-free/virtual-time-testable shape as
  * the other two; see SpeakingClockController's class doc for the pattern).
  *
- * Speech is opt-in and QUIET by design here: an optional every-N elapsed
- * announcement ("Five minutes") and an optional spoken lap on the Lap press
- * — both off by default, both at [Speaker.PRIORITY_STOPWATCH], which LOSES
- * every collision (a stopwatch line never talks over a timer or the clock).
+ * It speaks the ascending milestones ([stopwatchCuesBetween]) as it counts
+ * up — "one, two, three, four, five", then "Ten seconds", "Thirty seconds",
+ * "One minute"… — ON by default (the whole point of a talking stopwatch),
+ * with a settings toggle. Spoken laps on the Lap press are a separate,
+ * off-by-default option. Everything here speaks at [Speaker
+ * .PRIORITY_STOPWATCH], which LOSES every collision (a stopwatch line never
+ * talks over a timer or the clock).
  */
 class StopwatchController(
     monotonicMs: () -> Long,
@@ -33,8 +39,9 @@ class StopwatchController(
     data class State(
         val snapshot: StopwatchEngine.Snapshot =
             StopwatchEngine.Snapshot(StopwatchEngine.Phase.Idle, Duration.ZERO, emptyList()),
-        /** Announce the elapsed time every this often; null = silent. */
-        val announceEvery: Duration? = null,
+        /** Announce the ascending milestones as it counts up. ON by default:
+         *  a talking stopwatch that stays silent isn't a talking stopwatch. */
+        val speakElapsed: Boolean = true,
         /** Speak "Lap three: …" on each Lap press. */
         val speakLaps: Boolean = false,
     )
@@ -83,8 +90,8 @@ class StopwatchController(
     }
 
     /** Settings hooks, pushed by the app-level settings collector. */
-    fun setAnnounceEvery(every: Duration?) {
-        stateFlow.value = stateFlow.value.copy(announceEvery = every)
+    fun setSpeakElapsed(speak: Boolean) {
+        stateFlow.value = stateFlow.value.copy(speakElapsed = speak)
     }
 
     fun setSpeakLaps(speak: Boolean) {
@@ -116,10 +123,10 @@ class StopwatchController(
     fun currentElapsed(): Duration = engine.snapshot().elapsed
 
     /**
-     * Sample at 100 ms while running — the tenths digit on screen updates
-     * that fast, and nothing runs at all once paused/reset. The every-N
-     * announcement uses the crossed-a-multiple rule (same idea as the
-     * timer's cues): announce when elapsed crosses a whole multiple of N.
+     * Sample at 100 ms while running — fast enough to catch each milestone
+     * as it's crossed, and nothing runs at all once paused/reset. Every
+     * milestone the [stopwatchCuesBetween] rule reports is spoken (a late
+     * tick fires all it skipped, in order).
      */
     private suspend fun tickLoop() {
         var prevElapsed = stateFlow.value.snapshot.elapsed
@@ -127,21 +134,21 @@ class StopwatchController(
             delay(TICK_MILLIS)
             publish()
             val now = stateFlow.value.snapshot.elapsed
-            val every = stateFlow.value.announceEvery
-            if (every != null && !every.isZero) {
-                val prevMultiple = prevElapsed.toMillis() / every.toMillis()
-                val nowMultiple = now.toMillis() / every.toMillis()
-                if (nowMultiple > prevMultiple && !isQuietNow()) {
-                    announcer.announce(
-                        Utterance.StopwatchElapsed(
-                            Duration.ofMillis(nowMultiple * every.toMillis()),
-                        ),
-                        Speaker.PRIORITY_STOPWATCH,
-                    )
-                }
+            if (stateFlow.value.speakElapsed && !isQuietNow()) {
+                stopwatchCuesBetween(prevElapsed, now).forEach(::announceCue)
             }
             prevElapsed = now
         }
+    }
+
+    /** Speak one milestone: bare numbers for the opening count, the reached
+     *  elapsed time otherwise. */
+    private fun announceCue(cue: StopwatchCue) {
+        val utterance = when (cue) {
+            is StopwatchCue.Count -> Utterance.Raw(Phrasebook.numberWords(cue.number))
+            is StopwatchCue.Elapsed -> Utterance.StopwatchElapsed(cue.at)
+        }
+        announcer.announce(utterance, Speaker.PRIORITY_STOPWATCH)
     }
 
     private fun publish() {

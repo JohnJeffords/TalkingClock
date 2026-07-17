@@ -56,11 +56,12 @@ class TimerControllerTest {
         advance(Duration.ofMinutes(2)) // run it to the end
 
         assertEquals(
+            // The default schedule now mirrors the stopwatch's milestones,
+            // which has 30 s and 10 s but no 20 s mark.
             listOf(
                 "Timer started: two minutes",
                 "One minute remaining",
                 "Thirty seconds remaining",
-                "Twenty seconds remaining",
                 "Ten seconds remaining",
                 "five",
                 "four",

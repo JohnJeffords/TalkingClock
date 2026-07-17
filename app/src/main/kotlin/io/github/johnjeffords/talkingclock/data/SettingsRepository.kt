@@ -47,10 +47,10 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val autoOffMinutes: Int = 60,
         val lastCustomIntervalSeconds: Int? = null,
         // Timer
-        val timerScheduleName: String = "Game style",
+        val timerScheduleName: String = "Milestones",
         val lastTimerDurationSeconds: Long = 15 * 60,
         // Stopwatch
-        val stopwatchAnnounceEverySeconds: Int = 0, // 0 = off
+        val stopwatchSpeakElapsed: Boolean = true, // speaks the milestones by default
         val stopwatchSpeakLaps: Boolean = false,
         // Quiet hours
         val quietHoursEnabled: Boolean = false,
@@ -74,9 +74,9 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             voicePackId = prefs[KEY_VOICE_PACK],
             autoOffMinutes = prefs[KEY_AUTO_OFF_MINUTES] ?: 60,
             lastCustomIntervalSeconds = prefs[KEY_LAST_CUSTOM_INTERVAL],
-            timerScheduleName = prefs[KEY_TIMER_SCHEDULE] ?: "Game style",
+            timerScheduleName = prefs[KEY_TIMER_SCHEDULE] ?: "Milestones",
             lastTimerDurationSeconds = prefs[KEY_LAST_TIMER_DURATION] ?: (15 * 60L),
-            stopwatchAnnounceEverySeconds = prefs[KEY_SW_ANNOUNCE_EVERY] ?: 0,
+            stopwatchSpeakElapsed = prefs[KEY_SW_SPEAK_ELAPSED] ?: true,
             stopwatchSpeakLaps = prefs[KEY_SW_SPEAK_LAPS] ?: false,
             quietHoursEnabled = prefs[KEY_QUIET_ENABLED] ?: false,
             quietFromMinutes = prefs[KEY_QUIET_FROM] ?: (22 * 60),
@@ -136,8 +136,8 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     suspend fun setLastTimerDuration(seconds: Long) =
         dataStore.edit { it[KEY_LAST_TIMER_DURATION] = seconds }
 
-    suspend fun setStopwatchAnnounceEvery(seconds: Int) =
-        dataStore.edit { it[KEY_SW_ANNOUNCE_EVERY] = seconds }
+    suspend fun setStopwatchSpeakElapsed(speak: Boolean) =
+        dataStore.edit { it[KEY_SW_SPEAK_ELAPSED] = speak }
 
     suspend fun setStopwatchSpeakLaps(speak: Boolean) =
         dataStore.edit { it[KEY_SW_SPEAK_LAPS] = speak }
@@ -167,7 +167,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         private val KEY_LAST_CUSTOM_INTERVAL = intPreferencesKey("last_custom_interval_s")
         private val KEY_TIMER_SCHEDULE = stringPreferencesKey("timer_schedule")
         private val KEY_LAST_TIMER_DURATION = longPreferencesKey("last_timer_duration_s")
-        private val KEY_SW_ANNOUNCE_EVERY = intPreferencesKey("sw_announce_every_s")
+        private val KEY_SW_SPEAK_ELAPSED = booleanPreferencesKey("sw_speak_elapsed")
         private val KEY_SW_SPEAK_LAPS = booleanPreferencesKey("sw_speak_laps")
         private val KEY_QUIET_ENABLED = booleanPreferencesKey("quiet_enabled")
         private val KEY_QUIET_FROM = intPreferencesKey("quiet_from_min")

@@ -116,8 +116,8 @@ class SettingsViewModel(
     // --- Speaking clock / timer / stopwatch ---
     fun setAutoOffMinutes(minutes: Int) = write { repository.setAutoOffMinutes(minutes) }
     fun setTimerScheduleName(name: String) = write { repository.setTimerScheduleName(name) }
-    fun setStopwatchAnnounceEvery(seconds: Int) =
-        write { repository.setStopwatchAnnounceEvery(seconds) }
+    fun setStopwatchSpeakElapsed(speak: Boolean) =
+        write { repository.setStopwatchSpeakElapsed(speak) }
     fun setStopwatchSpeakLaps(speak: Boolean) =
         write { repository.setStopwatchSpeakLaps(speak) }
 
