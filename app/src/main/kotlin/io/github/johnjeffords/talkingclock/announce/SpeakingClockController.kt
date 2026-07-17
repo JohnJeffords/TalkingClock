@@ -2,9 +2,10 @@ package io.github.johnjeffords.talkingclock.announce
 
 import io.github.johnjeffords.talkingclock.domain.announce.SpeakInterval
 import io.github.johnjeffords.talkingclock.domain.announce.nextAnnouncementTime
-import io.github.johnjeffords.talkingclock.domain.speech.Phrasebook
 import io.github.johnjeffords.talkingclock.domain.speech.SpeakingStyle
+import io.github.johnjeffords.talkingclock.speech.Announcer
 import io.github.johnjeffords.talkingclock.speech.Speaker
+import io.github.johnjeffords.talkingclock.speech.Utterance
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -44,7 +45,7 @@ import java.time.LocalDateTime
  */
 class SpeakingClockController(
     private val clock: Clock,
-    private val speaker: Speaker,
+    private val announcer: Announcer,
     private val scope: CoroutineScope,
     private val ensureServiceRunning: () -> Unit,
 ) {
@@ -124,7 +125,7 @@ class SpeakingClockController(
     fun disarm() {
         announceJob?.cancel()
         announceJob = null
-        speaker.stop()
+        announcer.stop()
         stateFlow.value = State()
     }
 
@@ -162,8 +163,8 @@ class SpeakingClockController(
             // would be useless. Clock priority: yields to timer cues if
             // both land on the same instant.
             if (!isQuietNow()) {
-                speaker.speak(
-                    Phrasebook.timeAnnouncement(
+                announcer.announce(
+                    Utterance.TimeAnnouncement(
                         time = now.toLocalTime(),
                         style = speakingStyle,
                         includeSeconds = interval.seconds < 60,

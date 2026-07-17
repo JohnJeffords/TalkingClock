@@ -1,11 +1,11 @@
 package io.github.johnjeffords.talkingclock.announce
 
-import io.github.johnjeffords.talkingclock.domain.speech.Phrasebook
 import io.github.johnjeffords.talkingclock.domain.timer.AnnouncementSchedule
-import io.github.johnjeffords.talkingclock.domain.timer.TimerCue
 import io.github.johnjeffords.talkingclock.domain.timer.TimerEngine
 import io.github.johnjeffords.talkingclock.domain.timer.cuesBetween
+import io.github.johnjeffords.talkingclock.speech.Announcer
 import io.github.johnjeffords.talkingclock.speech.Speaker
+import io.github.johnjeffords.talkingclock.speech.Utterance
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -38,7 +38,7 @@ import java.time.Duration
  */
 class TimerController(
     monotonicMs: () -> Long,
-    private val speaker: Speaker,
+    private val announcer: Announcer,
     private val scope: CoroutineScope,
     private val ensureServiceRunning: () -> Unit,
 ) {
@@ -77,7 +77,7 @@ class TimerController(
             lastDuration = duration,
         )
         if (schedule.announceStart && !isQuietNow()) {
-            speaker.speak(Phrasebook.timerStarted(duration), Speaker.PRIORITY_TIMER)
+            announcer.announce(Utterance.TimerStarted(duration), Speaker.PRIORITY_TIMER)
         }
         ensureServiceRunning()
         startTickLoop()
@@ -103,7 +103,7 @@ class TimerController(
     fun reset() {
         stopTickLoop()
         engine.reset()
-        speaker.stop()
+        announcer.stop()
         publish()
     }
 
@@ -162,22 +162,13 @@ class TimerController(
             publish()
 
             val cues = cuesBetween(schedule, duration, prevRemaining, snap.remaining)
-            if (cues.isNotEmpty() && !isQuietNow()) speakCues(cues)
+            if (cues.isNotEmpty() && !isQuietNow()) {
+                // A tick's cues travel as ONE utterance (several only after
+                // a stall) so the voice pack or TTS renders them together.
+                announcer.announce(Utterance.TimerCues(cues), Speaker.PRIORITY_TIMER)
+            }
             prevRemaining = snap.remaining
         }
-    }
-
-    /** Speak a tick's cues as one utterance (multiple only after a stall). */
-    private fun speakCues(cues: List<TimerCue>) {
-        val text = cues.joinToString(". ") { cue ->
-            when (cue) {
-                is TimerCue.Checkpoint -> Phrasebook.timerRemaining(cue.remaining)
-                is TimerCue.Halfway -> Phrasebook.timerHalfway(cue.remaining)
-                is TimerCue.Countdown -> Phrasebook.numberWords(cue.number)
-                TimerCue.TimesUp -> Phrasebook.TIMES_UP
-            }
-        }
-        speaker.speak(text, Speaker.PRIORITY_TIMER)
     }
 
     private fun publish() {

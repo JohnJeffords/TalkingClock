@@ -1,7 +1,7 @@
 package io.github.johnjeffords.talkingclock.announce
 
 import io.github.johnjeffords.talkingclock.domain.announce.SpeakInterval
-import io.github.johnjeffords.talkingclock.speech.FakeSpeaker
+import io.github.johnjeffords.talkingclock.speech.FakeAnnouncer
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -49,7 +49,7 @@ class SpeakingClockControllerTest {
     // Test fixture: 10:00:07 UTC — deliberately NOT on a boundary.
     private val startAt = LocalDateTime.of(2000, 1, 1, 10, 0, 7)
     private val clock = MutableClock(startAt.toInstant(ZoneOffset.UTC), ZoneOffset.UTC)
-    private val speaker = FakeSpeaker()
+    private val speaker = FakeAnnouncer()
 
     /** Times the controller poked "make sure the service is up". Stopping
      *  is the service's own decision, so there is no stop signal to count. */
@@ -57,7 +57,7 @@ class SpeakingClockControllerTest {
 
     private fun TestScope.buildController() = SpeakingClockController(
         clock = clock,
-        speaker = speaker,
+        announcer = speaker,
         scope = backgroundScope,
         ensureServiceRunning = { servicePokes++ },
     )

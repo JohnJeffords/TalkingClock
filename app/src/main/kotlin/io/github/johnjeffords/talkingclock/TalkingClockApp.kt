@@ -14,8 +14,12 @@ import io.github.johnjeffords.talkingclock.domain.stopwatch.StopwatchEngine
 import io.github.johnjeffords.talkingclock.domain.timer.AnnouncementSchedule
 import io.github.johnjeffords.talkingclock.domain.timer.TimerEngine
 import io.github.johnjeffords.talkingclock.service.AnnouncerService
+import io.github.johnjeffords.talkingclock.speech.Announcer
 import io.github.johnjeffords.talkingclock.speech.Speaker
+import io.github.johnjeffords.talkingclock.speech.SpeechAnnouncer
 import io.github.johnjeffords.talkingclock.speech.TtsSpeaker
+import io.github.johnjeffords.talkingclock.voicepack.VoicePackPlayer
+import io.github.johnjeffords.talkingclock.voicepack.VoicePackStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -59,6 +63,21 @@ class TalkingClockApp : Application() {
     /** Concrete handle for settings-only calls (rate/pitch). */
     private lateinit var ttsSpeaker: TtsSpeaker
 
+    /** Voice-pack storage (import/list/delete). */
+    lateinit var voicePackStore: VoicePackStore
+        private set
+
+    /** What everything speaks through: pack when selected, TTS fallback. */
+    lateinit var announcer: Announcer
+        private set
+
+    /** The active pack's player, swapped live by the settings collector. */
+    @Volatile
+    private var activePackPlayer: VoicePackPlayer? = null
+
+    /** Which pack id the current player was built for (null = system TTS). */
+    private var activePackId: String? = null
+
     lateinit var speakingClockController: SpeakingClockController
         private set
 
@@ -82,23 +101,25 @@ class TalkingClockApp : Application() {
         engineStateStore = EngineStateStore(settingsDataStore)
         ttsSpeaker = TtsSpeaker.create(this)
         speaker = ttsSpeaker
+        voicePackStore = VoicePackStore(this)
+        announcer = SpeechAnnouncer(speaker) { activePackPlayer }
 
         speakingClockController = SpeakingClockController(
             clock = java.time.Clock.systemDefaultZone(),
-            speaker = speaker,
+            announcer = announcer,
             scope = appScope,
             ensureServiceRunning = { AnnouncerService.ensureRunning(this) },
         )
         timerController = TimerController(
             // Monotonic time — never the wall clock (ARCHITECTURE.md).
             monotonicMs = SystemClock::elapsedRealtime,
-            speaker = speaker,
+            announcer = announcer,
             scope = appScope,
             ensureServiceRunning = { AnnouncerService.ensureRunning(this) },
         )
         stopwatchController = StopwatchController(
             monotonicMs = SystemClock::elapsedRealtime,
-            speaker = speaker,
+            announcer = announcer,
             scope = appScope,
             ensureServiceRunning = { AnnouncerService.ensureRunning(this) },
         )
@@ -156,8 +177,24 @@ class TalkingClockApp : Application() {
                 stopwatchController.setSpeakLaps(settings.stopwatchSpeakLaps)
                 ttsSpeaker.setRate(settings.ttsRate)
                 ttsSpeaker.setPitch(settings.ttsPitch)
+                switchVoicePackIfNeeded(settings.voicePackId)
             }
             .launchIn(appScope)
+    }
+
+    /** Build/tear down the pack player when the voice-source setting changes. */
+    private suspend fun switchVoicePackIfNeeded(packId: String?) {
+        if (packId == activePackId) return
+        activePackPlayer?.release()
+        activePackPlayer = null
+        activePackId = packId
+        if (packId != null) {
+            // A deleted/corrupt pack silently reverts to TTS — the Announcer
+            // falls back whenever activePackPlayer is null.
+            voicePackStore.loadPack(packId)?.let { pack ->
+                activePackPlayer = VoicePackPlayer(voicePackStore, pack, appScope)
+            }
+        }
     }
 
     /**

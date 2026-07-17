@@ -1,6 +1,8 @@
 package io.github.johnjeffords.talkingclock.ui
 
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -120,6 +122,16 @@ fun TalkingClockRoot() {
         composable(Routes.VOICE) {
             val speaker = (context.applicationContext as TalkingClockApp).speaker
             val speakerState by speaker.state.collectAsStateWithLifecycle()
+            val installedPacks by settingsViewModel.installedPacks.collectAsStateWithLifecycle()
+            val importError by settingsViewModel.importError.collectAsStateWithLifecycle()
+
+            // The system file picker (Storage Access Framework): the user
+            // grants access to exactly one file — no storage permission.
+            // .tcvoice is a plain zip, so we accept generic types too.
+            val packPicker = rememberLauncherForActivityResult(
+                ActivityResultContracts.OpenDocument(),
+            ) { uri -> uri?.let(settingsViewModel::importVoicePack) }
+
             SettingsScaffold(
                 title = stringResource(R.string.settings_voice),
                 onBack = { navController.popBackStack() },
@@ -128,8 +140,19 @@ fun TalkingClockRoot() {
                     speakerState = speakerState,
                     rate = settings.ttsRate,
                     pitch = settings.ttsPitch,
+                    selectedPackId = settings.voicePackId,
+                    installedPacks = installedPacks,
+                    importError = importError,
                     onSetRate = settingsViewModel::setTtsRate,
                     onSetPitch = settingsViewModel::setTtsPitch,
+                    onSelectPack = settingsViewModel::selectVoicePack,
+                    onImportPack = {
+                        packPicker.launch(
+                            arrayOf("application/zip", "application/octet-stream", "*/*"),
+                        )
+                    },
+                    onDeletePack = settingsViewModel::deleteVoicePack,
+                    onDismissImportError = settingsViewModel::dismissImportError,
                     onTest = { settingsViewModel.previewSpeech() },
                     onInstallEngine = {
                         context.startActivity(

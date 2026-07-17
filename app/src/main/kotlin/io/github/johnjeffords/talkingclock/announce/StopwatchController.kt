@@ -1,8 +1,9 @@
 package io.github.johnjeffords.talkingclock.announce
 
-import io.github.johnjeffords.talkingclock.domain.speech.Phrasebook
 import io.github.johnjeffords.talkingclock.domain.stopwatch.StopwatchEngine
+import io.github.johnjeffords.talkingclock.speech.Announcer
 import io.github.johnjeffords.talkingclock.speech.Speaker
+import io.github.johnjeffords.talkingclock.speech.Utterance
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -24,7 +25,7 @@ import java.time.Duration
  */
 class StopwatchController(
     monotonicMs: () -> Long,
-    private val speaker: Speaker,
+    private val announcer: Announcer,
     private val scope: CoroutineScope,
     private val ensureServiceRunning: () -> Unit,
 ) {
@@ -67,8 +68,8 @@ class StopwatchController(
         publish()
         val lap = stateFlow.value.snapshot.laps.lastOrNull() ?: return
         if (stateFlow.value.speakLaps) {
-            speaker.speak(
-                Phrasebook.stopwatchLap(lap.number, lap.lapTime),
+            announcer.announce(
+                Utterance.StopwatchLap(lap.number, lap.lapTime),
                 Speaker.PRIORITY_STOPWATCH,
             )
         }
@@ -122,8 +123,8 @@ class StopwatchController(
                 val prevMultiple = prevElapsed.toMillis() / every.toMillis()
                 val nowMultiple = now.toMillis() / every.toMillis()
                 if (nowMultiple > prevMultiple && !isQuietNow()) {
-                    speaker.speak(
-                        Phrasebook.stopwatchElapsed(
+                    announcer.announce(
+                        Utterance.StopwatchElapsed(
                             Duration.ofMillis(nowMultiple * every.toMillis()),
                         ),
                         Speaker.PRIORITY_STOPWATCH,

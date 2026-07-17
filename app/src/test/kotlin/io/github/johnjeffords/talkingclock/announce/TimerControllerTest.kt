@@ -2,7 +2,7 @@ package io.github.johnjeffords.talkingclock.announce
 
 import io.github.johnjeffords.talkingclock.domain.timer.AnnouncementSchedule
 import io.github.johnjeffords.talkingclock.domain.timer.TimerEngine
-import io.github.johnjeffords.talkingclock.speech.FakeSpeaker
+import io.github.johnjeffords.talkingclock.speech.FakeAnnouncer
 import io.github.johnjeffords.talkingclock.speech.Speaker
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
@@ -25,12 +25,12 @@ import java.time.Duration
 class TimerControllerTest {
 
     private var nowMs = 0L
-    private val speaker = FakeSpeaker()
+    private val speaker = FakeAnnouncer()
     private var servicePokes = 0
 
     private fun TestScope.buildController() = TimerController(
         monotonicMs = { nowMs },
-        speaker = speaker,
+        announcer = speaker,
         scope = backgroundScope,
         ensureServiceRunning = { servicePokes++ },
     )

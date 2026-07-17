@@ -136,6 +136,7 @@
     <string name="voice_pitch">Pitch</string>
     <string name="voice_test">Test voice</string>
     <string name="voice_import_pack">Import voice pack…</string>
+    <string name="voice_delete_pack">Delete voice pack</string>
 
     <!-- Quiet hours screen -->
     <string name="quiet_enable">Quiet hours</string>

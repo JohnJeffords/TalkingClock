@@ -1,6 +1,8 @@
 package io.github.johnjeffords.talkingclock.ui.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -8,30 +10,47 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.johnjeffords.talkingclock.R
+import io.github.johnjeffords.talkingclock.domain.voicepack.coverageOf
 import io.github.johnjeffords.talkingclock.speech.SpeakerState
 import io.github.johnjeffords.talkingclock.ui.components.NoSpeechEngineCard
+import io.github.johnjeffords.talkingclock.voicepack.VoicePackStore
 
 /**
- * Voice & speech settings (design frame 11): the no-engine warning when
- * needed, rate/pitch sliders, and the Test button. The voice-pack source
- * picker and import land with M7 — this screen grows those rows then.
+ * Voice & speech settings (design frame 11): the voice-source picker
+ * (system TTS or an installed voice pack, each pack with its coverage
+ * report), pack import/delete, rate/pitch sliders, the Test button, and
+ * the no-engine warning when needed.
  */
 @Composable
 fun VoiceScreen(
     speakerState: SpeakerState,
     rate: Float,
     pitch: Float,
+    selectedPackId: String?,
+    installedPacks: List<VoicePackStore.InstalledPack>,
+    importError: String?,
     onSetRate: (Float) -> Unit,
     onSetPitch: (Float) -> Unit,
+    onSelectPack: (String?) -> Unit,
+    onImportPack: () -> Unit,
+    onDeletePack: (String) -> Unit,
+    onDismissImportError: () -> Unit,
     onTest: () -> Unit,
     onInstallEngine: () -> Unit,
     modifier: Modifier = Modifier,
@@ -49,9 +68,61 @@ fun VoiceScreen(
             Spacer(Modifier.height(20.dp))
         }
 
-        // Rate. Sliders write the value on every drag tick; the repository
-        // write is cheap (one key) and the TTS engine applies it live, so
-        // dragging gives immediate feedback on the next Test.
+        // --- Voice source: system TTS or an installed pack ------------------
+        Text(
+            text = stringResource(R.string.voice_source),
+            style = MaterialTheme.typography.titleSmall,
+        )
+        VoiceSourceRow(
+            title = stringResource(R.string.voice_source_system),
+            subtitle = null,
+            selected = selectedPackId == null,
+            onSelect = { onSelectPack(null) },
+            onDelete = null,
+        )
+        installedPacks.forEach { pack ->
+            val coverage = coverageOf(pack.manifest)
+            VoiceSourceRow(
+                title = pack.manifest.name,
+                // The spec's coverage report, e.g.
+                // "Can speak: clock ✓ · timer ✓ · stopwatch ✗ — falls back to TTS"
+                subtitle = buildString {
+                    append("Can speak: ")
+                    append("clock ").append(if (coverage.clock) "✓" else "✗")
+                    append(" · timer ").append(if (coverage.timer) "✓" else "✗")
+                    append(" · stopwatch ").append(if (coverage.stopwatch) "✓" else "✗")
+                    if (!coverage.clock || !coverage.timer || !coverage.stopwatch) {
+                        append(" — missing parts fall back to the system voice")
+                    }
+                },
+                selected = selectedPackId == pack.id,
+                onSelect = { onSelectPack(pack.id) },
+                onDelete = { onDeletePack(pack.id) },
+            )
+        }
+
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(onClick = onImportPack, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.voice_import_pack))
+        }
+
+        importError?.let { error ->
+            Spacer(Modifier.height(8.dp))
+            // Import problems are shown verbatim — pack authors need the
+            // real reason ("Manifest references missing clip …"), not a shrug.
+            Text(
+                text = error,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onDismissImportError),
+            )
+        }
+
+        Spacer(Modifier.height(24.dp))
+
+        // --- Rate / pitch ----------------------------------------------------
         Text(
             text = stringResource(R.string.voice_rate),
             style = MaterialTheme.typography.titleSmall,
@@ -70,7 +141,7 @@ fun VoiceScreen(
 
         Button(
             onClick = onTest,
-            enabled = speakerState == SpeakerState.Ready,
+            enabled = speakerState == SpeakerState.Ready || selectedPackId != null,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(54.dp),
@@ -78,6 +149,45 @@ fun VoiceScreen(
             Text(stringResource(R.string.voice_test))
         }
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** One selectable voice source with an optional delete button. */
+@Composable
+private fun VoiceSourceRow(
+    title: String,
+    subtitle: String?,
+    selected: Boolean,
+    onSelect: () -> Unit,
+    onDelete: (() -> Unit)?,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onSelect)
+            .padding(vertical = 6.dp),
+    ) {
+        RadioButton(selected = selected, onClick = onSelect)
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            subtitle?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        onDelete?.let {
+            IconButton(onClick = it) {
+                Icon(
+                    imageVector = Icons.Outlined.Delete,
+                    contentDescription = stringResource(R.string.voice_delete_pack),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
 

@@ -22,7 +22,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.johnjeffords.talkingclock.TalkingClockApp
 import io.github.johnjeffords.talkingclock.domain.announce.SpeakInterval
-import io.github.johnjeffords.talkingclock.domain.speech.Phrasebook
+import io.github.johnjeffords.talkingclock.speech.Utterance
 import java.time.LocalTime
 
 /**
@@ -91,12 +91,13 @@ fun ClockRoute() {
         onSpeakNow = {
             // Speak the time AT THE MOMENT OF THE TAP (not the displayed
             // tick, which can be up to a second old), in the user's chosen
-            // speaking style.
+            // speaking style — through the announcer, so an active voice
+            // pack renders it when it can.
             val app = context.applicationContext as TalkingClockApp
-            speaker.speak(
-                Phrasebook.timeAnnouncement(
-                    LocalTime.now(),
-                    app.currentSettings.speakingStyle,
+            app.announcer.announce(
+                Utterance.TimeAnnouncement(
+                    time = LocalTime.now(),
+                    style = app.currentSettings.speakingStyle,
                 ),
             )
         },
