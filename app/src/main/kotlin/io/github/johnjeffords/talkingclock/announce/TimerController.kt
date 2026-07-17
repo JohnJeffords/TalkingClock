@@ -67,6 +67,16 @@ class TimerController(
     @Volatile
     var isQuietNow: () -> Boolean = { false }
 
+    /**
+     * How far AHEAD of each cue to start speaking, to cancel out the TTS
+     * engine's own latency (without it, "One minute remaining" lands a beat
+     * late — "one second behind"). Pushed by the settings collector; 0
+     * restores exact on-the-mark timing. Applied by looking ahead: cues are
+     * tested against remaining − lead, so each fires that much sooner.
+     */
+    @Volatile
+    var speechLead: Duration = Duration.ZERO
+
     /** Start a fresh countdown (replaces any current one — the design's
      *  "one active talking timer" rule). */
     fun start(duration: Duration, schedule: AnnouncementSchedule = stateFlow.value.schedule) {
@@ -80,7 +90,9 @@ class TimerController(
             announcer.announce(Utterance.TimerStarted(duration), Speaker.PRIORITY_TIMER)
         }
         ensureServiceRunning()
-        startTickLoop()
+        // Fresh run: seed the look-ahead at the true remaining (unshifted) so
+        // a cue within one lead of the start still fires.
+        startTickLoop(engine.snapshot().remaining)
     }
 
     /** Freeze the countdown; announcements (and sampling) pause with it. */
@@ -96,7 +108,9 @@ class TimerController(
         engine.resume()
         publish()
         ensureServiceRunning()
-        startTickLoop()
+        // Resume: seed already-shifted so a cue announced early before the
+        // pause can't fire a second time here.
+        startTickLoop(engine.snapshot().remaining - speechLead)
     }
 
     /** Stop and forget the run (Reset / Dismiss). */
@@ -144,9 +158,9 @@ class TimerController(
 
     // --- The sampling loop ---------------------------------------------------
 
-    private fun startTickLoop() {
+    private fun startTickLoop(seedRemaining: Duration) {
         tickJob?.cancel()
-        tickJob = scope.launch { tickLoop() }
+        tickJob = scope.launch { tickLoop(seedRemaining) }
     }
 
     private fun stopTickLoop() {
@@ -161,22 +175,25 @@ class TimerController(
      * speech — without meaningful battery cost. After the zero crossing the
      * loop keeps ticking so the overtime display counts up, until reset().
      */
-    private suspend fun tickLoop() {
+    private suspend fun tickLoop(seedRemaining: Duration) {
         val duration = stateFlow.value.snapshot.duration
         val schedule = stateFlow.value.schedule
-        var prevRemaining = engine.snapshot().remaining
+        var prevRemaining = seedRemaining
         while (true) {
             delay(TICK_MILLIS)
             val snap = engine.snapshot()
             publish()
 
-            val cues = cuesBetween(schedule, duration, prevRemaining, snap.remaining)
+            // Look ahead by the speech lead (remaining − lead) so each cue
+            // starts early enough to LAND on its mark despite TTS latency.
+            val nowRemaining = snap.remaining - speechLead
+            val cues = cuesBetween(schedule, duration, prevRemaining, nowRemaining)
             if (cues.isNotEmpty() && !isQuietNow()) {
                 // A tick's cues travel as ONE utterance (several only after
                 // a stall) so the voice pack or TTS renders them together.
                 announcer.announce(Utterance.TimerCues(cues), Speaker.PRIORITY_TIMER)
             }
-            prevRemaining = snap.remaining
+            prevRemaining = nowRemaining
         }
     }
 

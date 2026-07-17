@@ -59,6 +59,22 @@ class StopwatchControllerTest {
     }
 
     @Test
+    fun `a one-second speech lead fires each milestone a second early`() = runTest {
+        val controller = buildController()
+        controller.speechLead = Duration.ofSeconds(1)
+        controller.start()
+
+        advance(Duration.ofMillis(8_900)) // just before the early 10 s cue
+        assertEquals(listOf("one", "two", "three", "four", "five"), speaker.spoken)
+
+        advance(Duration.ofMillis(200)) // elapsed crosses 9 s -> 10 s cue, 1 s early
+        assertEquals(
+            listOf("one", "two", "three", "four", "five", "Ten seconds"),
+            speaker.spoken,
+        )
+    }
+
+    @Test
     fun `speaking can be turned off`() = runTest {
         val controller = buildController()
         controller.setSpeakElapsed(false)

@@ -18,6 +18,7 @@ import androidx.compose.material.icons.outlined.HourglassEmpty
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.PowerSettingsNew
 import androidx.compose.material.icons.outlined.RecordVoiceOver
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VolumeUp
@@ -61,6 +62,7 @@ fun SettingsScreen(
     onSetTimerSchedule: (String) -> Unit,
     onSetStopwatchSpeakElapsed: (Boolean) -> Unit,
     onSetStopwatchSpeakLaps: (Boolean) -> Unit,
+    onSetSpeechLead: (Int) -> Unit,
     onOpenVoice: () -> Unit,
     onOpenSpeakingStyle: () -> Unit,
     onOpenQuietHours: () -> Unit,
@@ -137,6 +139,12 @@ fun SettingsScreen(
             value = null,
             onClick = onOpenVoice,
         )
+        SettingsNavRow(
+            icon = Icons.Outlined.Schedule,
+            title = stringResource(R.string.settings_speech_lead),
+            value = speechLeadLabel(settings.speechLeadMillis),
+            onClick = { openDialog = SettingsDialog.SpeechLead },
+        )
 
         SettingsSectionHeader(stringResource(R.string.settings_section_display))
         SettingsNavRow(
@@ -210,13 +218,33 @@ fun SettingsScreen(
             },
             onDismiss = { openDialog = null },
         )
+        SettingsDialog.SpeechLead -> ChoiceDialog(
+            title = stringResource(R.string.settings_speech_lead),
+            options = SPEECH_LEAD_CHOICES.map { speechLeadLabel(it) },
+            selectedIndex = SPEECH_LEAD_CHOICES.indexOf(settings.speechLeadMillis)
+                .let { if (it == -1) SPEECH_LEAD_CHOICES.indexOf(1000) else it },
+            onSelect = { onSetSpeechLead(SPEECH_LEAD_CHOICES[it]); openDialog = null },
+            onDismiss = { openDialog = null },
+        )
         null -> Unit
     }
 }
 
-private enum class SettingsDialog { Theme, TimeFormat, AutoOff, TimerSchedule }
+private enum class SettingsDialog { Theme, TimeFormat, AutoOff, TimerSchedule, SpeechLead }
 
 private val AUTO_OFF_CHOICES = listOf(15, 30, 60, 120)
+
+/** Speech-lead options in milliseconds (Off, then half-second steps). */
+private val SPEECH_LEAD_CHOICES = listOf(0, 500, 1000, 1500, 2000, 2500)
+
+/** "1.0 s ahead" / "Off" label for a speech-lead value in ms. */
+@Composable
+private fun speechLeadLabel(millis: Int): String =
+    if (millis == 0) {
+        stringResource(R.string.settings_speech_lead_off)
+    } else {
+        stringResource(R.string.settings_speech_lead_value, millis / 1000f)
+    }
 
 /** "22:00"-style label for a minutes-since-midnight value. */
 fun formatMinutes(minutesSinceMidnight: Int): String =

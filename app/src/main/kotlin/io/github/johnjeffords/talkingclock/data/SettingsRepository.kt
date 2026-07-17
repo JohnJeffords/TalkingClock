@@ -41,6 +41,12 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val speakingStyle: SpeakingStyle = SpeakingStyle.Conversational,
         val ttsRate: Float = 1.0f,
         val ttsPitch: Float = 1.0f,
+        /**
+         * How many ms early the timer/stopwatch start speaking each mark, to
+         * cancel out TTS latency so the word lands ON the number. Default 1 s;
+         * 0 disables. User-adjustable (some engines are quicker than others).
+         */
+        val speechLeadMillis: Int = 1000,
         /** Selected voice pack directory name, or null for system TTS (M7). */
         val voicePackId: String? = null,
         // Speaking clock
@@ -71,6 +77,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
                 ?: SpeakingStyle.Conversational,
             ttsRate = prefs[KEY_TTS_RATE] ?: 1.0f,
             ttsPitch = prefs[KEY_TTS_PITCH] ?: 1.0f,
+            speechLeadMillis = prefs[KEY_SPEECH_LEAD_MS] ?: 1000,
             voicePackId = prefs[KEY_VOICE_PACK],
             autoOffMinutes = prefs[KEY_AUTO_OFF_MINUTES] ?: 60,
             lastCustomIntervalSeconds = prefs[KEY_LAST_CUSTOM_INTERVAL],
@@ -119,6 +126,9 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     suspend fun setTtsPitch(pitch: Float) =
         dataStore.edit { it[KEY_TTS_PITCH] = pitch.coerceIn(0.5f, 2.0f) }
 
+    suspend fun setSpeechLeadMillis(millis: Int) =
+        dataStore.edit { it[KEY_SPEECH_LEAD_MS] = millis.coerceIn(0, 3000) }
+
     suspend fun setVoicePackId(id: String?) =
         dataStore.edit { prefs ->
             if (id == null) prefs.remove(KEY_VOICE_PACK) else prefs[KEY_VOICE_PACK] = id
@@ -162,6 +172,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         private val KEY_SPEAKING_STYLE = stringPreferencesKey("speaking_style")
         private val KEY_TTS_RATE = floatPreferencesKey("tts_rate")
         private val KEY_TTS_PITCH = floatPreferencesKey("tts_pitch")
+        private val KEY_SPEECH_LEAD_MS = intPreferencesKey("speech_lead_ms")
         private val KEY_VOICE_PACK = stringPreferencesKey("voice_pack_id")
         private val KEY_AUTO_OFF_MINUTES = intPreferencesKey("auto_off_minutes")
         private val KEY_LAST_CUSTOM_INTERVAL = intPreferencesKey("last_custom_interval_s")

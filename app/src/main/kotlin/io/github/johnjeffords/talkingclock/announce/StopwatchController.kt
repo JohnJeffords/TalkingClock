@@ -52,12 +52,28 @@ class StopwatchController(
 
     private var tickJob: Job? = null
 
+    /**
+     * How far AHEAD of each milestone to start speaking, to cancel out the
+     * TTS engine's own latency (without it, a word said at the 10 s mark
+     * comes out of the speaker a beat late — "one second behind"). Pushed by
+     * the settings collector; 0 restores exact on-the-mark timing. Applied by
+     * looking ahead: the loop tests the milestones against elapsed + lead.
+     */
+    @Volatile
+    var speechLead: Duration = Duration.ZERO
+
     fun start() {
+        // Fresh runs seed the look-ahead at the true start (so a mark within
+        // one lead of zero — the opening "one" — still fires); resuming seeds
+        // it already-shifted so a mark announced early before the pause can't
+        // fire twice. resume() routes here as Paused, a fresh press as Idle.
+        val resuming = engine.snapshot().phase == StopwatchEngine.Phase.Paused
         engine.start()
         publish()
         ensureServiceRunning()
         tickJob?.cancel()
-        tickJob = scope.launch { tickLoop() }
+        val seed = engine.snapshot().elapsed + if (resuming) speechLead else Duration.ZERO
+        tickJob = scope.launch { tickLoop(seed) }
     }
 
     fun pause() {
@@ -128,12 +144,14 @@ class StopwatchController(
      * milestone the [stopwatchCuesBetween] rule reports is spoken (a late
      * tick fires all it skipped, in order).
      */
-    private suspend fun tickLoop() {
-        var prevElapsed = stateFlow.value.snapshot.elapsed
+    private suspend fun tickLoop(seedElapsed: Duration) {
+        var prevElapsed = seedElapsed
         while (true) {
             delay(TICK_MILLIS)
             publish()
-            val now = stateFlow.value.snapshot.elapsed
+            // Look ahead by the speech lead so the word starts early enough
+            // to LAND on the milestone despite TTS latency.
+            val now = stateFlow.value.snapshot.elapsed + speechLead
             if (stateFlow.value.speakElapsed && !isQuietNow()) {
                 stopwatchCuesBetween(prevElapsed, now).forEach(::announceCue)
             }

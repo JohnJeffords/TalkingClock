@@ -67,6 +67,7 @@ class SettingsViewModel(
     fun setSpeakingStyle(style: SpeakingStyle) = write { repository.setSpeakingStyle(style) }
     fun setTtsRate(rate: Float) = write { repository.setTtsRate(rate) }
     fun setTtsPitch(pitch: Float) = write { repository.setTtsPitch(pitch) }
+    fun setSpeechLeadMillis(millis: Int) = write { repository.setSpeechLeadMillis(millis) }
 
     /** The Voice screen's Test button and the style picker's previews —
      *  spoken through the announcer, so the active pack is what's tested. */

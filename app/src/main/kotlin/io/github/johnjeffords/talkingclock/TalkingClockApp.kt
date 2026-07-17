@@ -228,6 +228,10 @@ class TalkingClockApp : Application() {
                 )
                 stopwatchController.setSpeakElapsed(settings.stopwatchSpeakElapsed)
                 stopwatchController.setSpeakLaps(settings.stopwatchSpeakLaps)
+                // Same latency-compensation lead feeds both counting tools.
+                val speechLead = Duration.ofMillis(settings.speechLeadMillis.toLong())
+                timerController.speechLead = speechLead
+                stopwatchController.speechLead = speechLead
                 ttsSpeaker.setRate(settings.ttsRate)
                 ttsSpeaker.setPitch(settings.ttsPitch)
                 switchVoicePackIfNeeded(settings.voicePackId)

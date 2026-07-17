@@ -78,6 +78,21 @@ class TimerControllerTest {
     }
 
     @Test
+    fun `a one-second speech lead fires cues a second early`() = runTest {
+        val controller = buildController()
+        controller.speechLead = Duration.ofSeconds(1)
+        controller.start(Duration.ofMinutes(2), AnnouncementSchedule.GAME)
+        runCurrent()
+
+        // The 1-minute cue lands with ~61 s left (a second early), not 60 s.
+        advance(Duration.ofSeconds(59)) // 1:01 remaining
+        assertEquals(
+            listOf("Timer started: two minutes", "One minute remaining"),
+            speaker.spoken,
+        )
+    }
+
+    @Test
     fun `pause silences cues and resume picks up where it left off`() = runTest {
         val controller = buildController()
         controller.start(Duration.ofMinutes(2), AnnouncementSchedule.GAME)
