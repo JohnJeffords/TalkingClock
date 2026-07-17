@@ -1,0 +1,21 @@
+<resources>
+    <!-- User-visible strings live here (never hard-coded in Kotlin) so they
+         can be translated later. Android 13's per-app language picker works
+         automatically once other locales are added. -->
+    <string name="app_name">Talking Clock</string>
+
+    <!-- Bottom-navigation destinations -->
+    <string name="nav_clock">Clock</string>
+    <string name="nav_timer">Timer</string>
+    <string name="nav_stopwatch">Stopwatch</string>
+
+    <!-- Clock screen -->
+    <string name="clock_open_menu">Open menu</string>
+    <string name="clock_tap_to_speak">Tap the time to speak it</string>
+    <string name="clock_speak_every">Speak every</string>
+    <string name="clock_interval_off">Off</string>
+    <string name="clock_no_announcements">No announcements scheduled</string>
+
+    <!-- Placeholder screens (built in later milestones) -->
+    <string name="coming_soon">Coming soon</string>
+</resources>

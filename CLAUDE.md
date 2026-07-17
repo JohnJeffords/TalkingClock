@@ -54,8 +54,12 @@ Specs consulted when relevant: [docs/VOICE_PACKS.md](docs/VOICE_PACKS.md),
 
 ## Verifying your work
 
-- Unit tests: `.\gradlew.bat test` (Windows host; use `./gradlew test` in CI)
-- Lint + format: `.\gradlew.bat lint spotlessCheck`
+- Unit + screenshot tests: `.\gradlew.bat testDebugUnitTest` (Windows host;
+  `./gradlew testDebugUnitTest` in CI). Regenerate screenshot goldens after an
+  intentional UI change with `-Proborazzi.test.record=true`.
+- Android Lint: `.\gradlew.bat lintDebug`
+- (Spotless/ktlint formatting is planned but not wired up yet — don't run
+  `spotlessCheck` until it exists.)
 - On-device: build `assembleDebug`, install via `adb install -r`, and
   exercise the changed flow on the owner's phone (see IMPLEMENTATION_PLAN.md
   → Dev environment). There is no local emulator by design; CI runs the

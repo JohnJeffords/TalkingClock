@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  App manifest. Note what is DELIBERATELY absent: there are no <uses-permission>
+  entries at all yet. The speaking-clock foreground service (M3) will add
+  FOREGROUND_SERVICE (+ MEDIA_PLAYBACK) and POST_NOTIFICATIONS, and nothing
+  else — never INTERNET. The CI "manifest guard" fails the build if any
+  permission outside the approved allowlist ever appears here
+  (see docs/TESTING_AND_CI.md, docs/DECISIONS.md D-006/D-020).
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:name=".TalkingClockApp"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.TalkingClock">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.TalkingClock">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

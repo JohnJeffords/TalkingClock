@@ -1,0 +1,10 @@
+<resources>
+    <!-- Pre-Compose "launch" theme (DARK). Dark is the app's default look
+         (see the design handoff), so the framework dark Material parent is a
+         good initial-window match. -->
+    <style name="Theme.TalkingClock" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/tc_window_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

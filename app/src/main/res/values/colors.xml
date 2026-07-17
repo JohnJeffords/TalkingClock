@@ -1,0 +1,11 @@
+<resources>
+    <!-- Window background used by the system for the split-second before
+         Compose draws (avoids a white flash on launch). The real color
+         system lives in Kotlin (ui/theme/Color.kt); these two just need to
+         match the Compose background for light/dark. Dark values are in
+         values-night/colors.xml. This is the LIGHT background. -->
+    <color name="tc_window_background">#F5F3F1</color>
+
+    <!-- Launcher icon background (the amber square behind the glyph). -->
+    <color name="ic_launcher_background">#FFC24B</color>
+</resources>

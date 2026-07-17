@@ -1,0 +1,5 @@
+<resources>
+    <!-- Dark window background (matches ui/theme dark background). The system
+         picks this file automatically when the device is in dark mode. -->
+    <color name="tc_window_background">#0F0E11</color>
+</resources>

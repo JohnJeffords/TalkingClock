@@ -1,0 +1,9 @@
+# Line-ending rules. Without these, Git on Windows can rewrite the Unix
+# `gradlew` script with CRLF endings, which makes it fail to run on Linux CI
+# ("bad interpreter"). Pin the shell script to LF and the batch script to CRLF.
+*           text=auto
+gradlew     text eol=lf
+*.sh        text eol=lf
+*.bat       text eol=crlf
+*.jar       binary
+*.png       binary

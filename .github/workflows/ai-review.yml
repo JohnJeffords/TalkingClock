@@ -1,0 +1,57 @@
+# Advisory AI code review on each PR (see docs/TESTING_AND_CI.md).
+#
+# Runs Anthropic's official claude-code-action to review the diff against this
+# project's rules, posting comments inline. It is advisory (never blocks
+# merge) and skips docs-only PRs to save cost. Requires an ANTHROPIC_API_KEY
+# repository secret — the one paid, non-shipping piece of CI. Model: Opus 4.8
+# at high effort (DECISIONS.md).
+name: AI code review
+
+on:
+  pull_request:
+    # Skip when only docs/config change — nothing to review, saves tokens.
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - ".github/**"
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Claude review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Charter mirrors CODE_STYLE.md + the review priorities in
+          # TESTING_AND_CI.md. Crucially it asks for EVERY finding with a
+          # confidence level rather than letting the model self-filter for
+          # severity (current Claude models follow "only serious issues"
+          # instructions literally and silently drop borderline findings).
+          claude_args: "--model claude-opus-4-8"
+          prompt: |
+            Review this pull request for the Talking Clock (OSS) Android app.
+            Read CLAUDE.md and docs/CODE_STYLE.md first — they are binding.
+
+            Report EVERY issue you find, including low-confidence and
+            low-severity ones, each tagged with a confidence level and a
+            severity. Do not self-filter for importance; a human makes the
+            final call. Prioritise, in order:
+            1. Correctness — especially the timekeeping rules in
+               docs/ARCHITECTURE.md (monotonic clock for timer/stopwatch,
+               wall clock for display) and announcement-scheduling edges.
+            2. CODE_STYLE.md compliance — beginner-readable naming, the
+               deliberately-high comment density, and the least-code ladder
+               (did this build something the platform or codebase already
+               provides?).
+            3. Docs-in-same-PR — flag changes that make DESIGN/ARCHITECTURE/
+               DECISIONS stale without updating them.
+            4. F-Droid hygiene — new dependencies, license headers, and any
+               permission creep beyond the approved allowlist.

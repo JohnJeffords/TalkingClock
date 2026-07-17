@@ -6,15 +6,22 @@ Update the **Status** column in the same PR that changes it.
 
 | # | Milestone | Status |
 |---|---|---|
-| M0 | Dev environment + project skeleton | not started |
-| M1 | Walking skeleton: ticking clock screen | not started |
+| M0 | Dev environment + project skeleton | in progress (2026-07-16) |
+| M1 | Walking skeleton: ticking clock screen | in progress (2026-07-16) |
 | M2 | Speech pipeline (TTS wrapper + phrasebook) | not started |
-| M3 | Speaking clock: intervals + foreground service | not started |
+| M3 | Speaking clock: intervals + foreground service + auto-off | not started |
 | M4 | Talking timer | not started |
 | M5 | Stopwatch | not started |
-| M6 | Settings + theming + accessibility pass | not started |
+| M6 | Settings + theming + accessibility (incl. speaking-style, quiet hours) | not started |
 | M7 | Voice packs | not started |
+| M7.5 | **Alarms** (list / edit / ringing + speaking-clock handoff) — adds exact-alarm + full-screen-intent permissions; see D-020. Owner veto point. | not started |
 | M8 | Release prep (F-Droid + Play) | not started |
+
+> Scope note (D-020): the design handoff expanded the app to four tools by
+> adding Alarms, plus Quiet Hours and speaking-clock auto-off. Quiet Hours and
+> auto-off fold into M3/M6; Alarms are their own late milestone (M7.5) because
+> they widen the permission set. Screens are built from the amber/mono design
+> tokens in the handoff (D-019).
 
 CI grows *with* the code: the pr.yml basics (build, unit tests, ktlint,
 manifest guard) land in M0; each later milestone adds its own tests to the

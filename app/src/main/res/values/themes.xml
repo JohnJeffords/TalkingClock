@@ -1,0 +1,13 @@
+<resources>
+    <!-- Pre-Compose "launch" theme (LIGHT). We intentionally use a framework
+         parent (android:Theme.Material.*) rather than AppCompat or Material
+         Components so the app pulls in NO extra View-toolkit dependency —
+         all real theming is done in Compose (ui/theme/). This style only
+         sets the initial window background. values-night/themes.xml is the
+         dark counterpart. -->
+    <style name="Theme.TalkingClock" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/tc_window_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>
