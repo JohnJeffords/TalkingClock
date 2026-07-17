@@ -112,6 +112,15 @@ class TimerController(
         stateFlow.value = stateFlow.value.copy(schedule = schedule)
     }
 
+    /**
+     * The live snapshot, read straight off the monotonic clock right now —
+     * not the last published one. The Timer screen uses this to redraw the
+     * ring and countdown every frame so they move at the display's refresh
+     * rate; the 200 ms [tickLoop] is enough for the announcements and the
+     * notification, but a ring that only steps 5×/second looks janky.
+     */
+    fun currentSnapshot(): TimerEngine.Snapshot = engine.snapshot()
+
     /** Settings restore: the keypad prefill from the previous app run. */
     fun restoreLastDuration(duration: Duration) {
         if (stateFlow.value.snapshot.phase == TimerEngine.Phase.Idle) {

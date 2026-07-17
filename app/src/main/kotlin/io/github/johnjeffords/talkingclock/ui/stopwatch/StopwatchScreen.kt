@@ -62,7 +62,9 @@ fun StopwatchScreen(
             )
             Spacer(Modifier.width(6.dp))
             Text(
-                text = ".%d".format(uiState.elapsed.toMillis() % 1000 / 100),
+                // Hundredths, like a real stopwatch — the last digit blurs as
+                // it counts (the display is frame-driven, see StopwatchRoute).
+                text = ".%02d".format(uiState.elapsed.toMillis() % 1000 / 10),
                 fontFamily = NumericFontFamily,
                 fontWeight = FontWeight.Medium,
                 fontSize = 40.sp,
@@ -191,10 +193,10 @@ private fun formatElapsed(d: Duration): String {
     return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 }
 
-/** Lap column format: "1:02.1" (minutes:seconds.tenths). */
+/** Lap column format: "1:02.14" (minutes:seconds.hundredths). */
 private fun formatLap(d: Duration): String {
     val m = d.toMinutes()
     val s = d.seconds % 60
-    val tenths = d.toMillis() % 1000 / 100
-    return "%d:%02d.%d".format(m, s, tenths)
+    val hundredths = d.toMillis() % 1000 / 10
+    return "%d:%02d.%02d".format(m, s, hundredths)
 }

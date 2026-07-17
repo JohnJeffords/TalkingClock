@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.johnjeffords.talkingclock.ui.TalkingClockRoot
 import io.github.johnjeffords.talkingclock.ui.theme.TalkingClockTheme
@@ -27,10 +28,12 @@ class MainActivity : ComponentActivity() {
         val app = application as TalkingClockApp
         setContent {
             // The theme setting drives the whole tree; changing it in
-            // Settings restyles every screen instantly.
-            val theme by app.settingsRepository.settings
-                .map { it.theme }
-                .collectAsStateWithLifecycle(initialValue = ThemeChoice.System)
+            // Settings restyles every screen instantly. The mapped flow is
+            // built inside remember (NOT directly in composition) so it isn't
+            // recreated every recomposition — the ComposeFlowOperatorInvoked
+            // lint rule, and the right thing regardless.
+            val themeFlow = remember(app) { app.settingsRepository.settings.map { it.theme } }
+            val theme by themeFlow.collectAsStateWithLifecycle(initialValue = ThemeChoice.System)
             TalkingClockTheme(theme) {
                 TalkingClockRoot()
             }

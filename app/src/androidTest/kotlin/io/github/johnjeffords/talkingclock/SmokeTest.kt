@@ -1,10 +1,10 @@
 package io.github.johnjeffords.talkingclock
 
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Rule
 import org.junit.Test
@@ -28,18 +28,21 @@ class SmokeTest {
 
     @Test
     fun launches_ticks_speaks_and_arms() {
-        // The Clock screen's fixtures are visible.
-        composeRule.onNodeWithText("Speak every").assertIsDisplayed()
-        composeRule.onNodeWithText("Tap the time to speak it").assertIsDisplayed()
+        // Let the app settle (TTS init, settings load, first tick).
+        composeRule.waitForIdle()
+
+        // The Clock screen composed — the tap hint is one of its fixtures.
+        // (The screen scrolls, so we assert existence, then scroll targets
+        // into view before touching them — the CI emulators show the tall
+        // no-engine card, which can push the bottom control off-screen.)
+        composeRule.onNodeWithText("Tap the time to speak it").assertExists()
 
         // Tap the time (speaks if an engine exists, silently drops if not —
-        // either way it must not crash). The hero time is found via its
-        // tap hint's sibling semantics: click through the accessibility
-        // action label instead.
-        composeRule.onNodeWithText("Tap the time to speak it").performClick()
+        // either way it must not crash).
+        composeRule.onNodeWithText("Tap the time to speak it").performScrollTo().performClick()
 
         // Arm at 5 min via the menu.
-        composeRule.onNodeWithText("Speak every").performClick()
+        composeRule.onNodeWithText("Speak every").performScrollTo().performClick()
         composeRule.onNodeWithText("5 min").performClick()
 
         // On Android 13+ the notification explainer appears first — answer

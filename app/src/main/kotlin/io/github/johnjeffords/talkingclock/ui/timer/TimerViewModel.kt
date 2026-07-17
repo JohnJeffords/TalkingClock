@@ -42,6 +42,13 @@ data class TimerUiState(
     val nextMarkAt: Duration? = null,
 )
 
+/** The fast-moving fields the Timer screen redraws every frame (see [TimerViewModel.liveTimer]). */
+data class LiveTimerValues(
+    val remaining: Duration,
+    val overtime: Duration,
+    val progress: Float,
+)
+
 /**
  * State holder for the Timer screen: merges the controller's live state
  * with the local keypad entry. The keypad is UI-side state (the controller
@@ -87,6 +94,25 @@ class TimerViewModel(
             started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5000),
             initialValue = TimerUiState(),
         )
+
+    /**
+     * Live remaining/overtime/progress read from the monotonic clock right
+     * now — for the frame-driven ring and countdown (see TimerRoute). Both
+     * the running (counting down) and finished (overtime counting up) phases
+     * have moving values, so the caller frame-drives in both.
+     */
+    fun liveTimer(): LiveTimerValues {
+        val snap = controller.currentSnapshot()
+        return LiveTimerValues(
+            remaining = if (snap.remaining.isNegative) Duration.ZERO else snap.remaining,
+            overtime = snap.overtime,
+            progress = if (snap.duration.isZero) {
+                1f
+            } else {
+                snap.remaining.toMillis().coerceAtLeast(0).toFloat() / snap.duration.toMillis()
+            },
+        )
+    }
 
     // --- Keypad -------------------------------------------------------------
 
