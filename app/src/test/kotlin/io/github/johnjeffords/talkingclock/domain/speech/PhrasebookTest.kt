@@ -122,6 +122,44 @@ class PhrasebookTest {
         )
     }
 
+    // --- Seconds suffix (used by sub-minute speaking-clock intervals) ---
+
+    @Test
+    fun `includeSeconds appends the seconds phrase`() {
+        assertEquals(
+            "It's ten twenty-four and thirty seconds",
+            Phrasebook.timeAnnouncement(
+                LocalTime.of(10, 24, 30),
+                SpeakingStyle.Conversational,
+                includeSeconds = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `includeSeconds is singular for one second`() {
+        assertEquals(
+            "It's ten twenty-four and one second",
+            Phrasebook.timeAnnouncement(
+                LocalTime.of(10, 24, 1),
+                SpeakingStyle.Conversational,
+                includeSeconds = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `includeSeconds stays silent at zero seconds`() {
+        assertEquals(
+            "It's ten twenty-four",
+            Phrasebook.timeAnnouncement(
+                LocalTime.of(10, 24, 0),
+                SpeakingStyle.Conversational,
+                includeSeconds = true,
+            ),
+        )
+    }
+
     // --- Number words ---
 
     @Test

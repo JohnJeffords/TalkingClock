@@ -21,6 +21,33 @@
     <string name="no_engine_body">This phone has no text-to-speech engine, so the clock can\'t talk yet. Install a free, fully offline engine like RHVoice or eSpeak NG.</string>
     <string name="no_engine_install">Get a free engine</string>
 
+    <!-- Foreground-service notification (speaking clock) -->
+    <string name="notif_channel_speaking">Speaking clock</string>
+    <string name="notif_speaking_title">Speaking clock</string>
+    <!-- e.g. "Every 5 min · next at 10:28 · tap to stop" -->
+    <string name="notif_speaking_body">Every %1$s · next at %2$s · tap to stop</string>
+    <string name="notif_action_stop">Stop</string>
+    <string name="notif_action_open">Open</string>
+
+    <!-- Armed speaking-clock UI -->
+    <string name="clock_announcing_chip">Announcing %1$s</string>
+    <string name="clock_next_in">Next in %1$s</string>
+    <string name="clock_auto_off_in">Auto-off in %1$s</string>
+    <string name="clock_interval_custom">Custom…</string>
+    <string name="clock_custom_dialog_title">Custom interval</string>
+    <string name="clock_custom_minutes">Minutes</string>
+    <string name="clock_custom_seconds">Seconds</string>
+    <string name="clock_custom_range_hint">Between 15 seconds and 24 hours</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="dialog_start">Start</string>
+
+    <!-- Notification-permission explainer (shown once, before the request) -->
+    <string name="notif_explainer_title">One notification, only while it\'s on</string>
+    <string name="notif_explainer_body">While the speaking clock or a timer is running, a notification shows what\'s on and lets you stop it from anywhere. That\'s the only notification this app ever shows.</string>
+    <string name="notif_explainer_honest">If you say no, everything still works — you just won\'t see it from outside the app.</string>
+    <string name="notif_explainer_deny">Not now</string>
+    <string name="notif_explainer_allow">Allow notifications</string>
+
     <!-- Placeholder screens (built in later milestones) -->
     <string name="coming_soon">Coming soon</string>
 </resources>

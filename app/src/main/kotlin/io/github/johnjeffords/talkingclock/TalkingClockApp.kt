@@ -1,8 +1,14 @@
 package io.github.johnjeffords.talkingclock
 
 import android.app.Application
+import io.github.johnjeffords.talkingclock.announce.SpeakingClockController
+import io.github.johnjeffords.talkingclock.service.AnnouncerService
 import io.github.johnjeffords.talkingclock.speech.Speaker
 import io.github.johnjeffords.talkingclock.speech.TtsSpeaker
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import java.time.Clock
 
 /**
  * The Application object — created once when the app process starts, before
@@ -24,8 +30,27 @@ class TalkingClockApp : Application() {
     lateinit var speaker: Speaker
         private set
 
+    /**
+     * The one speaking clock (see SpeakingClockController's class doc for
+     * why it's a process-wide singleton). Its announce loop runs on a
+     * process-lifetime scope; AnnouncerService keeps the process alive
+     * while armed.
+     */
+    lateinit var speakingClockController: SpeakingClockController
+        private set
+
+    /** Process-lifetime scope for the announce loop. SupervisorJob so a
+     *  crashed child never kills unrelated app-scope work. */
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     override fun onCreate() {
         super.onCreate()
         speaker = TtsSpeaker.create(this)
+        speakingClockController = SpeakingClockController(
+            clock = Clock.systemDefaultZone(),
+            speaker = speaker,
+            scope = appScope,
+            setServiceRunning = { running -> AnnouncerService.setRunning(this, running) },
+        )
     }
 }

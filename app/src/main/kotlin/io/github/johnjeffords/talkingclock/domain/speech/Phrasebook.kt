@@ -23,14 +23,25 @@ object Phrasebook {
     /**
      * The sentence announcing [time], e.g. "It's ten twenty-four" —
      * see [SpeakingStyle] for the four phrasings.
+     *
+     * @param includeSeconds append "… and N seconds" when the seconds are
+     *   nonzero. Used by the speaking clock at sub-minute intervals, where
+     *   announcing the same minute four times in a row would be useless.
      */
-    fun timeAnnouncement(time: LocalTime, style: SpeakingStyle): String {
-        return when (style) {
+    fun timeAnnouncement(
+        time: LocalTime,
+        style: SpeakingStyle,
+        includeSeconds: Boolean = false,
+    ): String {
+        val base = when (style) {
             SpeakingStyle.Conversational -> "It's ${conversational(time, use24Hour = false)}"
             SpeakingStyle.TwentyFourHour -> "It's ${conversational(time, use24Hour = true)}"
             SpeakingStyle.Digits -> "It's ${digits(time)}"
             SpeakingStyle.Formal -> "It's ${formal(time)}"
         }
+        if (!includeSeconds || time.second == 0) return base
+        val unit = if (time.second == 1) "second" else "seconds"
+        return "$base and ${numberWords(time.second)} $unit"
     }
 
     // --- The four phrasings -------------------------------------------------

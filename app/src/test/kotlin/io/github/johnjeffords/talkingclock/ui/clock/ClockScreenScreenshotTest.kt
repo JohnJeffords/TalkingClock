@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.captureRoboImage
+import io.github.johnjeffords.talkingclock.domain.announce.SpeakInterval
 import io.github.johnjeffords.talkingclock.domain.time.ClockReadout
 import io.github.johnjeffords.talkingclock.speech.SpeakerState
 import io.github.johnjeffords.talkingclock.ui.theme.TalkingClockTheme
@@ -17,6 +18,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import java.time.Duration
 
 /**
  * Screenshot ("golden image") tests for the Clock screen. Roborazzi renders
@@ -24,17 +26,13 @@ import org.robolectric.annotation.GraphicsMode
  * committed reference PNG, so any accidental visual change (a color, a size,
  * a layout shift) shows up as a failing test with a side-by-side diff.
  *
- * The reference PNGs are generated once by running with `-Proborazzi.test.record=true`
- * and then eyeballed against the design handoff screenshots (frame
- * 01-clock-off in dark and light). After that, plain `test` verifies the UI
- * still matches. See docs/TESTING_AND_CI.md.
+ * References are (re)generated with `-Proborazzi.test.record=true` and
+ * eyeballed against the design handoff frames (01-clock-off, 02-speaking);
+ * plain `test` then verifies pixel-for-pixel. See docs/TESTING_AND_CI.md.
  *
- * We feed a FIXED [ClockReadout] rather than the live clock so the image is
- * byte-for-byte deterministic every run — that's exactly why ClockScreen is a
+ * All inputs are FIXED (fake readout, fixed durations, animations off) so
+ * the image is byte-for-byte deterministic — exactly why ClockScreen is a
  * pure function of its inputs.
- *
- * The device qualifier pins a 412dp-wide phone (the design's canvas) at a
- * fixed density so goldens are stable across machines.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -45,8 +43,7 @@ class ClockScreenScreenshotTest {
     val composeRule = createComposeRule()
 
     // Matches the content of design frame 01-clock-off exactly (10:24 and
-    // 53 seconds on Tuesday July 15), so comparing golden to design frame
-    // is a like-for-like eyeball.
+    // 53 seconds on Tuesday July 15) so golden-vs-design is like-for-like.
     private val sampleReadout = ClockReadout(
         time = "10:24",
         seconds = "53",
@@ -54,27 +51,50 @@ class ClockScreenScreenshotTest {
         date = "Tuesday · July 15",
     )
 
+    private val offState = ClockUiState(readout = sampleReadout)
+
+    // Armed at 5 min, next announcement in 3:12, auto-off in 58 min —
+    // the design frame 02 content.
+    private val armedState = ClockUiState(
+        readout = sampleReadout,
+        armedInterval = SpeakInterval(5 * 60),
+        nextIn = Duration.ofMinutes(3).plusSeconds(12),
+        autoOffIn = Duration.ofMinutes(58),
+    )
+
     @Test
     fun clockScreen_off_dark() {
-        captureClockScreen(ThemeChoice.Dark, "src/test/screenshots/clock_off_dark.png")
+        capture(offState, ThemeChoice.Dark, "src/test/screenshots/clock_off_dark.png")
     }
 
     @Test
     fun clockScreen_off_light() {
-        captureClockScreen(ThemeChoice.Light, "src/test/screenshots/clock_off_light.png")
+        capture(offState, ThemeChoice.Light, "src/test/screenshots/clock_off_light.png")
+    }
+
+    @Test
+    fun clockScreen_speaking_dark() {
+        capture(armedState, ThemeChoice.Dark, "src/test/screenshots/clock_speaking_dark.png")
+    }
+
+    @Test
+    fun clockScreen_speaking_light() {
+        capture(armedState, ThemeChoice.Light, "src/test/screenshots/clock_speaking_light.png")
     }
 
     @Test
     fun clockScreen_noEngine_dark() {
         // The GrapheneOS/CalyxOS out-of-box state: warning card visible.
-        captureClockScreen(
+        capture(
+            offState,
             ThemeChoice.Dark,
             "src/test/screenshots/clock_no_engine_dark.png",
             speakerState = SpeakerState.NoEngine,
         )
     }
 
-    private fun captureClockScreen(
+    private fun capture(
+        uiState: ClockUiState,
         theme: ThemeChoice,
         outputPath: String,
         speakerState: SpeakerState = SpeakerState.Ready,
@@ -82,17 +102,19 @@ class ClockScreenScreenshotTest {
         composeRule.setContent {
             TalkingClockTheme(theme) {
                 // Paint the BACKGROUND color behind the screen, matching what
-                // Scaffold does in the real app. (Surface's default fill is
-                // the `surface` color, which made the card invisible in the
-                // first golden — the card only contrasts against background.)
+                // Scaffold does in the real app (Surface's default fill is
+                // `surface`, against which the cards would be invisible).
                 Surface(
                     color = MaterialTheme.colorScheme.background,
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     ClockScreen(
-                        readout = sampleReadout,
+                        uiState = uiState,
                         speakerState = speakerState,
+                        lastCustomInterval = null,
+                        animationsEnabled = false, // deterministic pixels
                         onSpeakNow = {},
+                        onSelectInterval = {},
                         onInstallEngine = {},
                     )
                 }
