@@ -8,10 +8,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.OpenInNew
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -20,6 +24,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,6 +58,7 @@ fun VoiceScreen(
     onDismissImportError: () -> Unit,
     onTest: () -> Unit,
     onInstallEngine: () -> Unit,
+    onOpenSystemSpeechSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -104,6 +110,30 @@ fun VoiceScreen(
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = onImportPack, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.voice_import_pack))
+        }
+
+        // Jump straight to Android's own Text-to-speech settings — where the
+        // engine, its voice/language, and speech rate actually live (installing
+        // a new engine like SherpaTTS, picking its voice, etc.).
+        TextButton(
+            onClick = onOpenSystemSpeechSettings,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Settings,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                stringResource(R.string.voice_system_settings),
+                modifier = Modifier.weight(1f),
+            )
+            Icon(
+                imageVector = Icons.Outlined.OpenInNew,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
         }
 
         importError?.let { error ->

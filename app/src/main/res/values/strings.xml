@@ -108,6 +108,7 @@
     <string name="settings_voice">Voice &amp; speech</string>
     <string name="settings_speech_lead">Speak ahead by</string>
     <string name="settings_speech_lead_value">%1$.1f s early</string>
+    <string name="voice_system_settings">System speech settings</string>
     <string name="settings_speech_lead_off">Off (on the mark)</string>
     <string name="settings_theme">Theme</string>
     <string name="settings_quiet_hours">Quiet hours</string>

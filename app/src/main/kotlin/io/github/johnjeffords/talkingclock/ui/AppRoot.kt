@@ -1,6 +1,8 @@
 package io.github.johnjeffords.talkingclock.ui
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -162,6 +164,16 @@ fun TalkingClockRoot() {
                         context.startActivity(
                             Intent(Intent.ACTION_VIEW, VOICE_ENGINE_FDROID_URL.toUri()),
                         )
+                    },
+                    onOpenSystemSpeechSettings = {
+                        // The system Text-to-speech screen. Its action isn't a
+                        // public constant, so fall back to the top-level Settings
+                        // app on the rare device that doesn't expose it directly.
+                        try {
+                            context.startActivity(Intent(ACTION_TTS_SETTINGS))
+                        } catch (_: ActivityNotFoundException) {
+                            context.startActivity(Intent(Settings.ACTION_SETTINGS))
+                        }
                     },
                     modifier = padding,
                 )
@@ -337,6 +349,14 @@ private fun SettingsScaffold(
 
 private const val REPO_URL = "https://github.com/JohnJeffords/TalkingClock"
 private const val ISSUES_URL = "https://github.com/JohnJeffords/TalkingClock/issues"
+
+/**
+ * Android's system Text-to-speech settings screen. There's no public
+ * constant for this action (it lives in the Settings app), but this string
+ * has been stable across Android versions; we fall back to the top-level
+ * Settings if a device doesn't expose it.
+ */
+private const val ACTION_TTS_SETTINGS = "com.android.settings.TTS_SETTINGS"
 
 /**
  * F-Droid page for the recommended FOSS speech engine. SherpaTTS is a proper
