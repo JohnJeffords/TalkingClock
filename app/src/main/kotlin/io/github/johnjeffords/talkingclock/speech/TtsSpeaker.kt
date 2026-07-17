@@ -45,12 +45,18 @@ class TtsSpeaker(
     override val state: StateFlow<SpeakerState> = stateFlow.asStateFlow()
 
     // Constructing TextToSpeech kicks off the async init; onInitResult runs
-    // when the engine reports back.
-    private val tts: TextToSpeech = TextToSpeech(context.applicationContext) { status ->
-        onInitResult(status)
-    }
+    // when the engine reports back. `lateinit` (not `val =`) matters here:
+    // when the device has NO engine at all, the constructor fires the
+    // callback SYNCHRONOUSLY — while `tts` is still unassigned — and the
+    // callback must survive that (see onInitResult). Found by the emulator
+    // smoke test on a stripped no-TTS image; a plain `val` crashed the app
+    // at startup on exactly the GrapheneOS-like devices we care most about.
+    private lateinit var tts: TextToSpeech
 
     init {
+        tts = TextToSpeech(context.applicationContext) { status ->
+            onInitResult(status)
+        }
         // Fires as each utterance actually starts/finishes/errors — this is
         // where audio focus is released, so other audio un-ducks exactly when
         // the speech ends rather than when it was requested.
@@ -68,6 +74,12 @@ class TtsSpeaker(
      * Maps the engine's init callback onto our [SpeakerState]. Package-private
      * (not `private`) so the unit test can drive the state machine directly
      * without faking the whole engine.
+     *
+     * May run BEFORE [tts] is assigned: with no engine installed, the
+     * TextToSpeech constructor reports failure synchronously from inside
+     * construction. In that window we can't (and don't need to) ask the
+     * engine anything — a synchronous failure means there was no engine to
+     * bind, so it IS the NoEngine case.
      */
     internal fun onInitResult(status: Int) {
         stateFlow.value = if (status == TextToSpeech.SUCCESS) {
@@ -76,7 +88,8 @@ class TtsSpeaker(
             // ERROR covers both "engine broke" and "no engine responded".
             // If the device has no engines at all, report the more useful
             // NoEngine so the UI can show install guidance.
-            if (tts.engines.isEmpty()) SpeakerState.NoEngine else SpeakerState.Error
+            val engines = if (::tts.isInitialized) tts.engines else emptyList()
+            if (engines.isEmpty()) SpeakerState.NoEngine else SpeakerState.Error
         }
     }
 
