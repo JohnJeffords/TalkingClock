@@ -75,6 +75,33 @@ sealed interface TimerCue {
 }
 
 /**
+ * The next mark that WILL be spoken, given the current remaining time —
+ * drives the running screen's "Next: one minute remaining" indicator.
+ * Returns null when nothing is left to say before "Time's up".
+ */
+fun nextMark(
+    schedule: AnnouncementSchedule,
+    duration: Duration,
+    remaining: Duration,
+): Duration? {
+    val marks = buildList {
+        schedule.checkpoints
+            .filter { it < duration && it.seconds > schedule.countdownFrom }
+            .forEach { add(it) }
+        if (schedule.everyMinute) {
+            var m = Duration.ofMinutes(1)
+            while (m < duration) {
+                if (m.seconds > schedule.countdownFrom) add(m)
+                m = m.plusMinutes(1)
+            }
+        }
+        if (schedule.halfway && duration >= Duration.ofMinutes(1)) add(duration.dividedBy(2))
+        if (schedule.countdownFrom > 0) add(Duration.ofSeconds(schedule.countdownFrom.toLong()))
+    }
+    return marks.filter { it < remaining }.maxOrNull()
+}
+
+/**
  * Which cues fired between two observations of the remaining time?
  *
  * The timer loop samples the remaining time every few hundred ms; a cue

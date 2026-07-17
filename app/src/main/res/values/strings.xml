@@ -57,6 +57,20 @@
     <string name="notif_explainer_deny">Not now</string>
     <string name="notif_explainer_allow">Allow notifications</string>
 
+    <!-- Timer screen -->
+    <string name="timer_entry_units">hours : minutes : seconds</string>
+    <string name="timer_announcements_label">Announcements: %1$s ▾</string>
+    <string name="timer_start">Start</string>
+    <string name="timer_pause">Pause</string>
+    <string name="timer_resume">Resume</string>
+    <string name="timer_reset">Reset</string>
+    <string name="timer_paused_label">Paused</string>
+    <string name="timer_paused_note">Announcements are paused too</string>
+    <string name="timer_next_cue">Next: %1$s</string>
+    <string name="timer_times_up">Time\'s up!</string>
+    <string name="timer_dismiss">Dismiss</string>
+    <string name="timer_restart">Restart</string>
+
     <!-- Placeholder screens (built in later milestones) -->
     <string name="coming_soon">Coming soon</string>
 </resources>
