@@ -2,9 +2,12 @@ package io.github.johnjeffords.talkingclock
 
 import android.app.Application
 import android.os.SystemClock
+import io.github.johnjeffords.talkingclock.alarm.AlarmRinger
+import io.github.johnjeffords.talkingclock.alarm.AlarmScheduler
 import io.github.johnjeffords.talkingclock.announce.SpeakingClockController
 import io.github.johnjeffords.talkingclock.announce.StopwatchController
 import io.github.johnjeffords.talkingclock.announce.TimerController
+import io.github.johnjeffords.talkingclock.data.AlarmRepository
 import io.github.johnjeffords.talkingclock.data.EngineStateStore
 import io.github.johnjeffords.talkingclock.data.SettingsRepository
 import io.github.johnjeffords.talkingclock.data.settingsDataStore
@@ -24,6 +27,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -87,6 +91,14 @@ class TalkingClockApp : Application() {
     lateinit var stopwatchController: StopwatchController
         private set
 
+    // --- Alarms (M7.5; permission notes in the manifest + D-020) ---
+    lateinit var alarmRepository: AlarmRepository
+        private set
+    lateinit var alarmScheduler: AlarmScheduler
+        private set
+    lateinit var alarmRinger: AlarmRinger
+        private set
+
     /** The latest settings snapshot, readable synchronously by wiring code. */
     @Volatile
     var currentSettings: SettingsRepository.Settings = SettingsRepository.Settings()
@@ -124,10 +136,50 @@ class TalkingClockApp : Application() {
             ensureServiceRunning = { AnnouncerService.ensureRunning(this) },
         )
 
+        alarmRepository = AlarmRepository(settingsDataStore)
+        alarmScheduler = AlarmScheduler(this)
+        alarmRinger = AlarmRinger(
+            context = this,
+            announcer = announcer,
+            scope = appScope,
+            speakingStyle = { currentSettings.speakingStyle },
+            onSnoozed = { alarm, ringAgainAt ->
+                // Snooze re-books this alarm's slot at the exact snooze
+                // moment; a repeating alarm's next real occurrence gets
+                // re-booked when the snoozed ring is answered.
+                alarmScheduler.scheduleAt(alarm, ringAgainAt)
+            },
+            onFinished = { alarm ->
+                if (alarm.isOneShot) {
+                    // One-shots disable themselves after ringing (frame 23).
+                    appScope.launch { alarmRepository.setEnabled(alarm.id, false) }
+                } else {
+                    // Repeating: re-book the next real occurrence. Necessary
+                    // because a snooze reuses the alarm's single booking slot
+                    // — this puts the regular schedule back.
+                    alarmScheduler.schedule(alarm)
+                }
+            },
+            onHandoff = { alarm ->
+                // The signature feature: dismiss -> the speaking clock runs
+                // while the user gets ready (design frame 24's amber card).
+                alarm.handoffIntervalSeconds?.let { seconds ->
+                    speakingClockController.arm(
+                        SpeakInterval(seconds),
+                        autoOff = Duration.ofMinutes(alarm.handoffMinutes.toLong()),
+                    )
+                }
+            },
+        )
+
         wireQuietHours()
         wireSettingsIntoConsumers()
         wireEnginePersistence()
         restoreSavedState()
+        // Re-sync AlarmManager with the stored alarms at every process start
+        // (cheap, idempotent, and covers app-update process restarts that
+        // BootReceiver doesn't).
+        appScope.launch { alarmScheduler.rescheduleAll(alarmRepository.alarms.first()) }
     }
 
     /** Quiet-hours checks: clock/stopwatch silenced by the window; timers

@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.AccessTime
+import androidx.compose.material.icons.outlined.Alarm
 import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.HourglassEmpty
 import androidx.compose.material.icons.outlined.Timer
@@ -42,6 +43,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import io.github.johnjeffords.talkingclock.R
 import io.github.johnjeffords.talkingclock.TalkingClockApp
+import io.github.johnjeffords.talkingclock.ui.alarm.AlarmRoute
 import io.github.johnjeffords.talkingclock.ui.clock.ClockRoute
 import io.github.johnjeffords.talkingclock.ui.clock.ClockViewModel
 import io.github.johnjeffords.talkingclock.ui.clock.NightstandScreen
@@ -76,9 +78,10 @@ private object Routes {
     const val ABOUT = "settings/about"
 }
 
-/** The bottom-navigation tools. */
+/** The bottom-navigation tools, in the design's order (frame 01's bar). */
 enum class HomeTab(val labelRes: Int, val icon: ImageVector) {
     Clock(R.string.nav_clock, Icons.Outlined.AccessTime),
+    Alarm(R.string.nav_alarm, Icons.Outlined.Alarm),
     Timer(R.string.nav_timer, Icons.Outlined.Timer),
     Stopwatch(R.string.nav_stopwatch, Icons.Outlined.HourglassEmpty),
 }
@@ -294,6 +297,7 @@ private fun HomeShell(onOpenSettings: () -> Unit) {
             Box(Modifier.fillMaxSize().padding(innerPadding)) {
                 when (selectedTab) {
                     HomeTab.Clock -> ClockRoute()
+                    HomeTab.Alarm -> AlarmRoute()
                     HomeTab.Timer -> TimerRoute()
                     HomeTab.Stopwatch -> StopwatchRoute()
                 }

@@ -154,6 +154,32 @@
     <string name="about_privacy_title">Nothing leaves your phone</string>
     <string name="about_privacy_body">This app has no internet permission — no ads, no trackers, no accounts, no data collection. Everything happens on your device.</string>
 
+    <!-- Alarms -->
+    <string name="nav_alarm">Alarm</string>
+    <string name="notif_channel_alarm">Alarms</string>
+    <string name="alarm_ringing_title">Alarm</string>
+    <string name="alarm_next_in">Next alarm in %1$s</string>
+    <string name="alarm_empty">No alarms yet. Tap + to add one — a talking alarm can hand off to the speaking clock while you get ready.</string>
+    <string name="alarm_add">Add alarm</string>
+    <string name="alarm_once">Once</string>
+    <string name="alarm_once_hint">No days selected — rings once, then turns off</string>
+    <string name="alarm_tap_to_change">Tap the time to change it</string>
+    <string name="alarm_label">Label</string>
+    <string name="alarm_announce_time">Announce the time when ringing</string>
+    <string name="alarm_vibrate">Vibrate</string>
+    <string name="alarm_handoff_title">Start the speaking clock</string>
+    <string name="alarm_handoff_body">When you dismiss this alarm, the clock starts announcing the time while you get ready</string>
+    <string name="alarm_handoff_value">Announcing %1$s · tap to change</string>
+    <string name="alarm_handoff_interval">Handoff interval</string>
+    <string name="alarm_save">Save</string>
+    <string name="alarm_delete">Delete alarm</string>
+    <string name="alarm_snooze">Snooze</string>
+    <string name="alarm_dismiss">Dismiss</string>
+    <string name="alarm_handoff_note">Dismissing starts the speaking clock</string>
+    <string name="alarm_speaks_time">Announces the time on ring</string>
+    <string name="alarm_speaks_handoff">Starts speaking clock · %1$s</string>
+    <string name="alarm_speaks_sound_only">Sound only</string>
+
     <!-- Placeholder screens (built in later milestones) -->
     <string name="coming_soon">Coming soon</string>
 </resources>

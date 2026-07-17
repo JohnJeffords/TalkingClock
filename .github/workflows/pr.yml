@@ -46,7 +46,9 @@ jobs:
         run: |
           set -euo pipefail
           MANIFEST=app/src/main/AndroidManifest.xml
-          ALLOWED='FOREGROUND_SERVICE|FOREGROUND_SERVICE_MEDIA_PLAYBACK|POST_NOTIFICATIONS'
+          # Widened for the alarm feature per DECISIONS.md D-020 (still no
+          # INTERNET, no storage, no location — see the manifest's comment).
+          ALLOWED='FOREGROUND_SERVICE|FOREGROUND_SERVICE_MEDIA_PLAYBACK|POST_NOTIFICATIONS|USE_EXACT_ALARM|SCHEDULE_EXACT_ALARM|USE_FULL_SCREEN_INTENT|RECEIVE_BOOT_COMPLETED|VIBRATE'
           # Extract every android.permission.* requested in the source manifest.
           perms=$(grep -oE 'android\.permission\.[A-Z_]+' "$MANIFEST" | sort -u || true)
           if echo "$perms" | grep -q 'android.permission.INTERNET'; then

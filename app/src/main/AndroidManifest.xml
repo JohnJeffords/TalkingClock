@@ -1,22 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  App manifest. The permission set is EXACTLY these three, and the CI
+  App manifest. The permission set is EXACTLY what's listed, and the CI
   "manifest guard" fails the build if anything outside the allowlist — above
   all INTERNET — ever appears here (docs/TESTING_AND_CI.md, DECISIONS.md
   D-006/D-020):
 
-  - FOREGROUND_SERVICE(+_MEDIA_PLAYBACK): lets announcements keep speaking
-    with the screen off / app backgrounded (a "normal" permission — granted
-    at install, no user prompt).
-  - POST_NOTIFICATIONS: a runtime prompt on Android 13+, asked once with an
-    in-app explanation, so the service's status notification is visible.
-    Denial is honored: everything still works, just without the notification.
+  - FOREGROUND_SERVICE(+_MEDIA_PLAYBACK): announcements keep speaking with
+    the screen off (normal permission — granted at install, no prompt).
+  - POST_NOTIFICATIONS: runtime prompt on 13+, asked once with an in-app
+    explanation. Denial honored: everything works, just less visible.
+  - Alarm set (D-020 — added WITH the alarm feature, the documented veto
+    point): USE_EXACT_ALARM (13+, grant-free for alarm-clock apps) with
+    SCHEDULE_EXACT_ALARM as the pre-13 equivalent; USE_FULL_SCREEN_INTENT
+    so the ringing screen pops over the lockscreen; RECEIVE_BOOT_COMPLETED
+    to re-book alarms after a reboot; VIBRATE for the ringing buzz.
+    Still no INTERNET — ever.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission
+        android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:name=".TalkingClockApp"
@@ -44,6 +55,31 @@
             android:name=".service.AnnouncerService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
+
+        <!-- The full-screen ringing UI: shows over the lockscreen, wakes
+             the screen — launched only by our own full-screen intent. -->
+        <activity
+            android:name=".alarm.AlarmRingingActivity"
+            android:exported="false"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.TalkingClock" />
+
+        <!-- Fired by AlarmManager when an alarm is due. Not exported: only
+             our own PendingIntents can reach it. -->
+        <receiver
+            android:name=".alarm.AlarmReceiver"
+            android:exported="false" />
+
+        <!-- Re-books alarms after a reboot (AlarmManager forgets them). -->
+        <receiver
+            android:name=".alarm.BootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
