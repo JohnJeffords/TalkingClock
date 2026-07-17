@@ -1,0 +1,4 @@
+First release: speaking clock with intervals and auto-off, talking timer
+with game-style announcements, talking alarms with speaking-clock handoff,
+stopwatch with spoken laps, voice packs, quiet hours, nightstand mode.
+No internet permission — nothing leaves your phone.

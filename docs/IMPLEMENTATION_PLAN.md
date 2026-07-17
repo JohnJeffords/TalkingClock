@@ -12,10 +12,10 @@ Update the **Status** column in the same PR that changes it.
 | M3 | Speaking clock: intervals + foreground service + auto-off | **built + unit/golden tested** (2026-07-17) — screen-off soak test pending on-device |
 | M4 | Talking timer | **built + tested** (2026-07-17) — full spoken-transcript tests; on-device ±1s check pending |
 | M5 | Stopwatch | **built + tested** (2026-07-17) — process-death persistence deferred to M6 |
-| M6 | Settings + theming + accessibility (incl. speaking-style, quiet hours) | not started |
-| M7 | Voice packs | not started |
-| M7.5 | **Alarms** (list / edit / ringing + speaking-clock handoff) — adds exact-alarm + full-screen-intent permissions; see D-020. Owner veto point. | not started |
-| M8 | Release prep (F-Droid + Play) | not started |
+| M6 | Settings + theming + accessibility (incl. speaking-style, quiet hours) | **done** (2026-07-17) |
+| M7 | Voice packs | **done** (2026-07-17) — reference CC0 pack recording still open (owner's voice?) |
+| M7.5 | **Alarms** (list / edit / ringing + speaking-clock handoff) — permission widening landed per D-020 | **done** (2026-07-17) — on-device lockscreen/reboot checks pending (TESTING.md) |
+| M8 | Release prep (F-Droid + Play) | **repo side done** (2026-07-17): fastlane metadata, PRIVACY.md, TESTING.md. Owner-side remaining: signing key, Play account + closed test, fdroiddata MR, publish PRIVACY.md via GitHub Pages |
 
 > Scope note (D-020): the design handoff expanded the app to four tools by
 > adding Alarms, plus Quiet Hours and speaking-clock auto-off. Quiet Hours and

@@ -1,0 +1,31 @@
+Talking Clock speaks the time out loud so you don't have to remember to look
+at it — built first for people with time blindness, ADHD, or memory issues
+who lose track of time getting ready and end up running late.
+
+<b>The speaking clock</b> announces the time at an interval you choose (every
+15 seconds up to every hour), aligned to round times, with a safety auto-off.
+Arming it takes two taps, and it keeps talking with the screen off.
+
+<b>The talking timer</b> announces game-style milestones — "Five minutes
+remaining… five, four, three, two, one — time's up!" — with three built-in
+announcement styles.
+
+<b>Talking alarms</b> can speak the time while ringing, and hand off to the
+speaking clock when dismissed, so the clock keeps you on schedule while you
+get ready.
+
+<b>The stopwatch</b> counts up with laps, and can optionally speak the
+elapsed time and lap times.
+
+Also: quiet hours, a nightstand mode (dim red clock, screen stays on),
+four speaking styles, adjustable rate and pitch, dark/light/AMOLED themes —
+and voice packs: record the announcements in YOUR OWN voice (or a friend's)
+and import them; the app stitches your clips together. No AI involved.
+
+<b>Private by construction:</b> this app has no internet permission at all.
+No ads, no trackers, no accounts, no analytics. On phones without a
+text-to-speech engine (GrapheneOS, CalyxOS), it walks you through installing
+a free, fully offline one.
+
+Free software, GPL-3.0-or-later. Source:
+https://github.com/JohnJeffords/TalkingClock
