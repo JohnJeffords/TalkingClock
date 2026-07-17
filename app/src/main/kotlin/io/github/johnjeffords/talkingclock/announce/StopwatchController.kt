@@ -56,21 +56,35 @@ class StopwatchController(
      * comes out of the speaker a beat late — "one second behind"). Pushed by
      * the settings collector; 0 restores exact on-the-mark timing. Applied by
      * looking ahead: the loop tests the milestones against elapsed + lead.
+     *
+     * This is the DESIRED lead; a run uses the value latched into [runLead]
+     * when it starts — see [start].
      */
     @Volatile
     var speechLead: Duration = Duration.ZERO
 
+    /**
+     * The lead in force for the current run, latched at [start] and held
+     * across pause/resume. Changing [speechLead] mid-run must NOT shift an
+     * in-flight loop's frontier (elapsed + runLead): a jump would re-cross an
+     * already-spoken milestone (double-fire) or skip an un-spoken one (drop),
+     * breaking stopwatchCuesBetween's exactly-once guarantee. A new lead
+     * applies to the NEXT run.
+     */
+    private var runLead: Duration = Duration.ZERO
+
     fun start() {
         // Fresh runs seed the look-ahead at the true start (so a mark within
-        // one lead of zero — the opening "one" — still fires); resuming seeds
+        // one lead of zero — the opening second — still fires); resuming seeds
         // it already-shifted so a mark announced early before the pause can't
         // fire twice. resume() routes here as Paused, a fresh press as Idle.
         val resuming = engine.snapshot().phase == StopwatchEngine.Phase.Paused
+        if (!resuming) runLead = speechLead // latch the lead for a fresh run
         engine.start()
         publish()
         ensureServiceRunning()
         tickJob?.cancel()
-        val seed = engine.snapshot().elapsed + if (resuming) speechLead else Duration.ZERO
+        val seed = engine.snapshot().elapsed + if (resuming) runLead else Duration.ZERO
         tickJob = scope.launch { tickLoop(seed) }
     }
 
@@ -100,6 +114,7 @@ class StopwatchController(
         tickJob?.cancel()
         tickJob = null
         engine.reset()
+        announcer.stop() // silence any milestone/lap still being spoken (as the timer's reset does)
         publish()
     }
 
@@ -123,6 +138,7 @@ class StopwatchController(
     /** Process-death restore: paused at the persisted elapsed time + laps. */
     fun restorePaused(elapsed: Duration, laps: List<StopwatchEngine.Lap>) {
         if (stateFlow.value.snapshot.phase != StopwatchEngine.Phase.Idle) return
+        runLead = speechLead // latch for the restored run's eventual resume
         engine.restorePaused(elapsed, laps)
         publish()
     }
@@ -147,9 +163,9 @@ class StopwatchController(
         while (true) {
             delay(TICK_MILLIS)
             publish()
-            // Look ahead by the speech lead so the word starts early enough
-            // to LAND on the milestone despite TTS latency.
-            val now = stateFlow.value.snapshot.elapsed + speechLead
+            // Look ahead by the run's latched lead so the word starts early
+            // enough to LAND on the milestone despite TTS latency.
+            val now = stateFlow.value.snapshot.elapsed + runLead
             if (stateFlow.value.speakElapsed && !isQuietNow()) {
                 stopwatchCuesBetween(prevElapsed, now).forEach { mark ->
                     announcer.announce(

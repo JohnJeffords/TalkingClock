@@ -82,6 +82,42 @@ class StopwatchControllerTest {
     }
 
     @Test
+    fun `lowering the lead mid-run doesn't double a milestone`() = runTest {
+        // The lead is latched at start; lowering it must not move the running
+        // loop's frontier back up, which would re-cross the 10 s milestone.
+        val controller = buildController()
+        controller.speechLead = Duration.ofSeconds(3)
+        controller.start()
+        advance(Duration.ofSeconds(8)) // "Ten seconds" already fired early (elapsed 7)
+        controller.speechLead = Duration.ZERO // user lowers the lead mid-run
+        advance(Duration.ofSeconds(4)) // elapsed passes the real 10 s
+
+        assertEquals(1, speaker.spoken.count { it == "Ten seconds" })
+    }
+
+    @Test
+    fun `raising the lead across a pause doesn't drop the next milestone`() = runTest {
+        val controller = buildController() // lead defaults to 0
+        controller.start()
+        advance(Duration.ofMillis(9_500)) // 1..5 s spoken; 10 s not yet
+        controller.pause()
+        controller.speechLead = Duration.ofSeconds(3) // user raises it while paused
+        controller.resume()
+        advance(Duration.ofSeconds(2)) // elapsed 9.5 -> 11.5, passes 10 s
+
+        assertEquals(1, speaker.spoken.count { it == "Ten seconds" })
+    }
+
+    @Test
+    fun `reset silences any in-flight speech`() = runTest {
+        val controller = buildController()
+        controller.start()
+        advance(Duration.ofSeconds(2))
+        controller.reset()
+        assertTrue(speaker.stopCount >= 1)
+    }
+
+    @Test
     fun `speaking can be turned off`() = runTest {
         val controller = buildController()
         controller.setSpeakElapsed(false)

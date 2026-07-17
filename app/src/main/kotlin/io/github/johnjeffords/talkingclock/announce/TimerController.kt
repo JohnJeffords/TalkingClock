@@ -73,13 +73,28 @@ class TimerController(
      * late — "one second behind"). Pushed by the settings collector; 0
      * restores exact on-the-mark timing. Applied by looking ahead: cues are
      * tested against remaining − lead, so each fires that much sooner.
+     *
+     * This is the DESIRED lead; the value actually used by a run is latched
+     * into [runLead] when it starts — see there.
      */
     @Volatile
     var speechLead: Duration = Duration.ZERO
 
+    /**
+     * The lead in force for the current run, latched when it starts and held
+     * across pause/resume. Changing [speechLead] mid-run must NOT shift an
+     * in-flight loop's frontier: the loop tests cues against remaining −
+     * runLead, and if that quantity jumped when the setting changed it would
+     * re-cross an already-spoken cue (double-fire) or skip an un-spoken one
+     * (drop), breaking cuesBetween's exactly-once guarantee. A new lead
+     * therefore applies to the NEXT run, not the one already counting.
+     */
+    private var runLead: Duration = Duration.ZERO
+
     /** Start a fresh countdown (replaces any current one — the design's
      *  "one active talking timer" rule). */
     fun start(duration: Duration, schedule: AnnouncementSchedule = stateFlow.value.schedule) {
+        runLead = speechLead // latch the lead for this whole run
         engine.start(duration)
         stateFlow.value = State(
             snapshot = engine.snapshot(),
@@ -108,9 +123,10 @@ class TimerController(
         engine.resume()
         publish()
         ensureServiceRunning()
-        // Resume: seed already-shifted so a cue announced early before the
-        // pause can't fire a second time here.
-        startTickLoop(engine.snapshot().remaining - speechLead)
+        // Resume: seed already-shifted (by the run's latched lead, not the
+        // live setting) so a cue announced early before the pause can't fire
+        // a second time here.
+        startTickLoop(engine.snapshot().remaining - runLead)
     }
 
     /** Stop and forget the run (Reset / Dismiss). */
@@ -151,6 +167,7 @@ class TimerController(
     fun restorePaused(duration: Duration, remaining: Duration) {
         if (stateFlow.value.snapshot.phase != TimerEngine.Phase.Idle) return
         if (remaining.isNegative || remaining > duration) return // corrupt state: ignore
+        runLead = speechLead // latch for the restored run's eventual resume
         engine.restorePaused(duration, remaining)
         publish()
         ensureServiceRunning()
@@ -184,9 +201,9 @@ class TimerController(
             val snap = engine.snapshot()
             publish()
 
-            // Look ahead by the speech lead (remaining − lead) so each cue
-            // starts early enough to LAND on its mark despite TTS latency.
-            val nowRemaining = snap.remaining - speechLead
+            // Look ahead by the run's latched lead (remaining − lead) so each
+            // cue starts early enough to LAND on its mark despite TTS latency.
+            val nowRemaining = snap.remaining - runLead
             val cues = cuesBetween(schedule, duration, prevRemaining, nowRemaining)
             if (cues.isNotEmpty() && !isQuietNow()) {
                 // A tick's cues travel as ONE utterance (several only after

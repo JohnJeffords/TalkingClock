@@ -93,6 +93,22 @@ class TimerControllerTest {
     }
 
     @Test
+    fun `lowering the lead mid-run doesn't double a cue`() = runTest {
+        // The lead is latched at start; lowering it must not move the running
+        // loop's frontier back up, which would re-cross the 1-minute mark.
+        val controller = buildController()
+        controller.speechLead = Duration.ofSeconds(1)
+        controller.start(Duration.ofMinutes(2), AnnouncementSchedule.GAME)
+        runCurrent()
+
+        advance(Duration.ofSeconds(59)) // "One minute remaining" fires ~1 s early
+        controller.speechLead = Duration.ZERO // user lowers the lead mid-run
+        advance(Duration.ofSeconds(5)) // count down through the real 60 s mark
+
+        assertEquals(1, speaker.spoken.count { it == "One minute remaining" })
+    }
+
+    @Test
     fun `pause silences cues and resume picks up where it left off`() = runTest {
         val controller = buildController()
         controller.start(Duration.ofMinutes(2), AnnouncementSchedule.GAME)
