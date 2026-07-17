@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -19,16 +21,15 @@ import io.github.johnjeffords.talkingclock.R
 
 /**
  * Contents of the slide-out navigation drawer: a small header, the tool
- * destinations, and (later) Settings / About. Selecting a tool switches the
- * bottom-nav tab and closes the drawer.
- *
- * Settings and About are shown but disabled until their screens exist (M6);
- * wiring them before the destination exists would just navigate to nothing.
+ * destinations, then Settings. Selecting a tool switches the bottom-nav tab
+ * and closes the drawer; Settings navigates to the settings area (About
+ * lives inside Settings, matching the design's information hierarchy).
  */
 @Composable
 fun AppDrawer(
     selectedTab: HomeTab,
     onSelectTab: (HomeTab) -> Unit,
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     ModalDrawerSheet(modifier = modifier) {
@@ -59,6 +60,16 @@ fun AppDrawer(
 
         Spacer(Modifier.height(8.dp))
         HorizontalDivider(Modifier.padding(horizontal = 24.dp))
+        Spacer(Modifier.height(8.dp))
+
+        NavigationDrawerItem(
+            icon = { Icon(Icons.Outlined.Settings, contentDescription = null) },
+            label = { Text(stringResource(R.string.settings_title)) },
+            selected = false,
+            onClick = onOpenSettings,
+            modifier = Modifier.padding(horizontal = 12.dp),
+        )
+
         Spacer(Modifier.height(8.dp))
 
         // Footer: license line, reinforcing the project's values.

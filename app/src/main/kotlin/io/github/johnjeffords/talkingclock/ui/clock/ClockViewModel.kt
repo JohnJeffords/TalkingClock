@@ -7,10 +7,12 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.johnjeffords.talkingclock.TalkingClockApp
 import io.github.johnjeffords.talkingclock.announce.SpeakingClockController
+import io.github.johnjeffords.talkingclock.data.SettingsRepository
 import io.github.johnjeffords.talkingclock.domain.announce.SpeakInterval
 import io.github.johnjeffords.talkingclock.domain.time.ClockReadout
 import io.github.johnjeffords.talkingclock.domain.time.SecondTicker
 import io.github.johnjeffords.talkingclock.domain.time.TimeFormatter
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +28,7 @@ import java.util.Locale
  * renders this and nothing else.
  *
  * @property readout the formatted wall-clock display (null before first tick).
+ * @property showDate whether the date line is drawn (a setting).
  * @property armedInterval the speaking-clock interval, or null when off.
  * @property nextIn time remaining until the next announcement ("Next in
  *   3:12"), or null when off.
@@ -33,6 +36,7 @@ import java.util.Locale
  */
 data class ClockUiState(
     val readout: ClockReadout? = null,
+    val showDate: Boolean = true,
     val armedInterval: SpeakInterval? = null,
     val nextIn: Duration? = null,
     val autoOffIn: Duration? = null,
@@ -55,11 +59,12 @@ class ClockViewModel(
     clock: Clock,
     locale: Locale,
     private val speakingClock: SpeakingClockController,
+    settingsFlow: Flow<SettingsRepository.Settings>,
 ) : ViewModel() {
 
-    /** The user's 12/24-hour and show-seconds choices. Settings wiring (M6)
-     *  will feed real values; the Activity sets 12/24h from the system. */
-    private val format = MutableStateFlow(ClockFormat(use24Hour = false, showSeconds = true))
+    /** The device's own 12/24-hour preference, reported by the Activity —
+     *  used only when the time-format SETTING says "follow system". */
+    private val systemUses24Hour = MutableStateFlow(false)
 
     private val ticker = SecondTicker(clock)
 
@@ -71,9 +76,20 @@ class ClockViewModel(
      * NOT affected: its loop lives in the controller, not here.)
      */
     val uiState: StateFlow<ClockUiState> =
-        combine(ticker.ticks(), format, speakingClock.state) { now, fmt, armed ->
+        combine(
+            ticker.ticks(),
+            settingsFlow,
+            systemUses24Hour,
+            speakingClock.state,
+        ) { now, settings, system24h, armed ->
+            val use24Hour = when (settings.timeFormat) {
+                SettingsRepository.TimeFormat.System -> system24h
+                SettingsRepository.TimeFormat.TwelveHour -> false
+                SettingsRepository.TimeFormat.TwentyFourHour -> true
+            }
             ClockUiState(
-                readout = TimeFormatter.format(now, fmt.use24Hour, fmt.showSeconds, locale),
+                readout = TimeFormatter.format(now, use24Hour, settings.showSeconds, locale),
+                showDate = settings.showDate,
                 armedInterval = armed.interval,
                 nextIn = armed.nextAt?.let { remainingUntil(now, it) },
                 autoOffIn = armed.autoOffAt?.let { remainingUntil(now, it) },
@@ -92,9 +108,10 @@ class ClockViewModel(
         if (interval == null) speakingClock.disarm() else speakingClock.arm(interval)
     }
 
-    /** Called by the Activity to match the device's 12/24-hour system setting. */
-    fun setUse24Hour(use24Hour: Boolean) {
-        format.value = format.value.copy(use24Hour = use24Hour)
+    /** Called by the route with the device's own 12/24-hour preference —
+     *  the value used when the time-format setting is "follow system". */
+    fun setSystemUses24Hour(use24Hour: Boolean) {
+        systemUses24Hour.value = use24Hour
     }
 
     /** Clamp to zero so a just-passed moment never renders as negative. */
@@ -112,14 +129,9 @@ class ClockViewModel(
                     clock = Clock.systemDefaultZone(),
                     locale = Locale.getDefault(),
                     speakingClock = app.speakingClockController,
+                    settingsFlow = app.settingsRepository.settings,
                 )
             }
         }
     }
 }
-
-/** The display-format inputs the Clock screen cares about. */
-data class ClockFormat(
-    val use24Hour: Boolean,
-    val showSeconds: Boolean,
-)

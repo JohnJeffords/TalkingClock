@@ -129,6 +129,16 @@ class TtsSpeaker(
         abandonFocus()
     }
 
+    /** Speech speed multiplier (1.0 = engine default). Settings-driven. */
+    fun setRate(rate: Float) {
+        if (::tts.isInitialized) tts.setSpeechRate(rate.coerceIn(0.5f, 2.0f))
+    }
+
+    /** Voice pitch multiplier (1.0 = engine default). Settings-driven. */
+    fun setPitch(pitch: Float) {
+        if (::tts.isInitialized) tts.setPitch(pitch.coerceIn(0.5f, 2.0f))
+    }
+
     companion object {
         // One logical utterance stream; the id just links progress callbacks
         // to our requests.

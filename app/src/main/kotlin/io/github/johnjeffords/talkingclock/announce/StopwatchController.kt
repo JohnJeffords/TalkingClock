@@ -81,13 +81,28 @@ class StopwatchController(
         publish()
     }
 
-    /** Settings hooks (wired to real persisted settings in M6). */
+    /** Settings hooks, pushed by the app-level settings collector. */
     fun setAnnounceEvery(every: Duration?) {
         stateFlow.value = stateFlow.value.copy(announceEvery = every)
     }
 
     fun setSpeakLaps(speak: Boolean) {
         stateFlow.value = stateFlow.value.copy(speakLaps = speak)
+    }
+
+    /**
+     * Quiet-hours check (same clock-side rule as the speaking clock: the
+     * stopwatch's ambient elapsed announcements go silent during quiet
+     * hours; lap presses are a deliberate user action and still speak).
+     */
+    @Volatile
+    var isQuietNow: () -> Boolean = { false }
+
+    /** Process-death restore: paused at the persisted elapsed time + laps. */
+    fun restorePaused(elapsed: Duration, laps: List<StopwatchEngine.Lap>) {
+        if (stateFlow.value.snapshot.phase != StopwatchEngine.Phase.Idle) return
+        engine.restorePaused(elapsed, laps)
+        publish()
     }
 
     /**
@@ -106,7 +121,7 @@ class StopwatchController(
             if (every != null && !every.isZero) {
                 val prevMultiple = prevElapsed.toMillis() / every.toMillis()
                 val nowMultiple = now.toMillis() / every.toMillis()
-                if (nowMultiple > prevMultiple) {
+                if (nowMultiple > prevMultiple && !isQuietNow()) {
                     speaker.speak(
                         Phrasebook.stopwatchElapsed(
                             Duration.ofMillis(nowMultiple * every.toMillis()),

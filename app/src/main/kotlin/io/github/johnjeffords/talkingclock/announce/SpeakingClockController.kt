@@ -66,28 +66,50 @@ class SpeakingClockController(
 
     /**
      * The most recent custom (non-preset) interval, occupying the
-     * "last custom" slot in the interval menu. In-memory for now; persisted
-     * with the rest of the settings in M6.
+     * "last custom" slot in the interval menu. Persisted via settings;
+     * restored at app start by the settings wiring in TalkingClockApp.
      */
     var lastCustomInterval: SpeakInterval? = null
-        private set
+
+    // --- Settings, pushed in by the app-level settings collector ------------
+    // (Kept as plain mutable properties rather than constructor params so the
+    // controller stays constructible before settings load, and reacts live.)
+
+    /** How announcements are phrased. */
+    @Volatile
+    var speakingStyle: SpeakingStyle = SpeakingStyle.Conversational
+
+    /** Auto-off used when [arm] isn't given an explicit duration. */
+    @Volatile
+    var defaultAutoOff: Duration = DEFAULT_AUTO_OFF
+
+    /**
+     * Quiet hours check, injected by the app wiring. While quiet, boundary
+     * announcements are SKIPPED but scheduling continues — the clock stays
+     * armed and resumes speaking the moment the window ends. (The Clock
+     * screen still shows the armed state, so nothing stops "silently";
+     * quiet hours are themselves a user-visible setting.)
+     */
+    @Volatile
+    var isQuietNow: () -> Boolean = { false }
 
     private var announceJob: Job? = null
 
     /**
      * Arm the speaking clock at [interval] (replacing any current interval),
-     * with automatic shutoff after [autoOff] — the design's "Auto-off in NN
-     * min" pill. Auto-off is a deliberate safety: a clock armed at 15 s and
-     * forgotten shouldn't chatter for a week.
+     * with automatic shutoff after [autoOff] (defaults to the user's
+     * configured [defaultAutoOff]) — the design's "Auto-off in NN min" pill.
+     * Auto-off is a deliberate safety: a clock armed at 15 s and forgotten
+     * shouldn't chatter for a week.
      */
-    fun arm(interval: SpeakInterval, autoOff: Duration = DEFAULT_AUTO_OFF) {
+    fun arm(interval: SpeakInterval, autoOff: Duration? = null) {
         if (interval !in SpeakInterval.PRESETS) lastCustomInterval = interval
 
         val now = LocalDateTime.now(clock)
         stateFlow.value = State(
             interval = interval,
             nextAt = nextAnnouncementTime(now, interval),
-            autoOffAt = now.plus(autoOff),
+            autoOffAt = now.plus(autoOff ?: defaultAutoOff),
         )
         ensureServiceRunning()
 
@@ -133,18 +155,22 @@ class SpeakingClockController(
                 continue
             }
 
-            // Boundary reached — announce THIS moment's time. Sub-minute
-            // intervals include seconds, otherwise four identical
-            // announcements per minute would be useless. Clock priority:
-            // yields to timer cues if both land on the same instant.
-            speaker.speak(
-                Phrasebook.timeAnnouncement(
-                    time = now.toLocalTime(),
-                    style = SpeakingStyle.Conversational, // setting arrives in M6
-                    includeSeconds = interval.seconds < 60,
-                ),
-                Speaker.PRIORITY_CLOCK,
-            )
+            // Boundary reached — announce THIS moment's time (unless quiet
+            // hours are active, in which case this boundary is skipped and
+            // scheduling simply continues). Sub-minute intervals include
+            // seconds, otherwise four identical announcements per minute
+            // would be useless. Clock priority: yields to timer cues if
+            // both land on the same instant.
+            if (!isQuietNow()) {
+                speaker.speak(
+                    Phrasebook.timeAnnouncement(
+                        time = now.toLocalTime(),
+                        style = speakingStyle,
+                        includeSeconds = interval.seconds < 60,
+                    ),
+                    Speaker.PRIORITY_CLOCK,
+                )
+            }
             stateFlow.value = st.copy(nextAt = nextAnnouncementTime(now, interval))
         }
     }

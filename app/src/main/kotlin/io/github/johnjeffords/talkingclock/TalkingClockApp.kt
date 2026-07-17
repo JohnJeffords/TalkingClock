@@ -5,13 +5,27 @@ import android.os.SystemClock
 import io.github.johnjeffords.talkingclock.announce.SpeakingClockController
 import io.github.johnjeffords.talkingclock.announce.StopwatchController
 import io.github.johnjeffords.talkingclock.announce.TimerController
+import io.github.johnjeffords.talkingclock.data.EngineStateStore
+import io.github.johnjeffords.talkingclock.data.SettingsRepository
+import io.github.johnjeffords.talkingclock.data.settingsDataStore
+import io.github.johnjeffords.talkingclock.domain.announce.QuietWindow
+import io.github.johnjeffords.talkingclock.domain.announce.SpeakInterval
+import io.github.johnjeffords.talkingclock.domain.stopwatch.StopwatchEngine
+import io.github.johnjeffords.talkingclock.domain.timer.AnnouncementSchedule
+import io.github.johnjeffords.talkingclock.domain.timer.TimerEngine
 import io.github.johnjeffords.talkingclock.service.AnnouncerService
 import io.github.johnjeffords.talkingclock.speech.Speaker
 import io.github.johnjeffords.talkingclock.speech.TtsSpeaker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import java.time.Clock
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
+import java.time.Duration
+import java.time.LocalTime
 
 /**
  * The Application object — created once when the app process starts, before
@@ -19,53 +33,64 @@ import java.time.Clock
  * hand (manual dependency injection: this app is small enough that a DI
  * framework like Hilt would add build time, APK size, and indirection
  * without paying for itself — see docs/ARCHITECTURE.md).
+ *
+ * Beyond construction, this class runs the SETTINGS PLUMBING: one collector
+ * pushes every settings change into the components that consume it, and two
+ * more persist timer/stopwatch progress so a killed process restores as
+ * paused (docs/ARCHITECTURE.md → Timekeeping).
  */
 class TalkingClockApp : Application() {
+
+    lateinit var settingsRepository: SettingsRepository
+        private set
+
+    lateinit var engineStateStore: EngineStateStore
+        private set
 
     /**
      * The one app-wide speech engine. Created EAGERLY at process start
      * rather than lazily on first use: TTS initialization is asynchronous
      * and takes a moment, so warming it here means the user's very first
      * tap-to-speak actually speaks instead of merely starting the engine.
-     * The OS reclaims it with the process; no explicit shutdown needed for
-     * an app-lifetime singleton.
      */
     lateinit var speaker: Speaker
         private set
 
-    /**
-     * The one speaking clock (see SpeakingClockController's class doc for
-     * why it's a process-wide singleton). Its announce loop runs on a
-     * process-lifetime scope; AnnouncerService keeps the process alive
-     * while armed.
-     */
+    /** Concrete handle for settings-only calls (rate/pitch). */
+    private lateinit var ttsSpeaker: TtsSpeaker
+
     lateinit var speakingClockController: SpeakingClockController
         private set
 
-    /** The one talking timer (one active timer at a time, by design). */
     lateinit var timerController: TimerController
         private set
 
-    /** The one stopwatch. */
     lateinit var stopwatchController: StopwatchController
         private set
 
-    /** Process-lifetime scope for the announce loops. SupervisorJob so a
-     *  crashed child never kills unrelated app-scope work. */
+    /** The latest settings snapshot, readable synchronously by wiring code. */
+    @Volatile
+    var currentSettings: SettingsRepository.Settings = SettingsRepository.Settings()
+        private set
+
+    /** Process-lifetime scope for announce loops and settings plumbing. */
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate() {
         super.onCreate()
-        speaker = TtsSpeaker.create(this)
+        settingsRepository = SettingsRepository(settingsDataStore)
+        engineStateStore = EngineStateStore(settingsDataStore)
+        ttsSpeaker = TtsSpeaker.create(this)
+        speaker = ttsSpeaker
+
         speakingClockController = SpeakingClockController(
-            clock = Clock.systemDefaultZone(),
+            clock = java.time.Clock.systemDefaultZone(),
             speaker = speaker,
             scope = appScope,
             ensureServiceRunning = { AnnouncerService.ensureRunning(this) },
         )
         timerController = TimerController(
-            // Monotonic time for the countdown — never the wall clock
-            // (docs/ARCHITECTURE.md → Timekeeping rules).
+            // Monotonic time — never the wall clock (ARCHITECTURE.md).
             monotonicMs = SystemClock::elapsedRealtime,
             speaker = speaker,
             scope = appScope,
@@ -77,5 +102,126 @@ class TalkingClockApp : Application() {
             scope = appScope,
             ensureServiceRunning = { AnnouncerService.ensureRunning(this) },
         )
+
+        wireQuietHours()
+        wireSettingsIntoConsumers()
+        wireEnginePersistence()
+        restoreSavedState()
+    }
+
+    /** Quiet-hours checks: clock/stopwatch silenced by the window; timers
+     *  only when the user turned the allow-timers exception OFF. */
+    private fun wireQuietHours() {
+        fun window() = QuietWindow(
+            currentSettings.quietFromMinutes,
+            currentSettings.quietUntilMinutes,
+        )
+
+        val clockQuiet = {
+            currentSettings.quietHoursEnabled && window().contains(LocalTime.now())
+        }
+        speakingClockController.isQuietNow = clockQuiet
+        stopwatchController.isQuietNow = clockQuiet
+        timerController.isQuietNow = {
+            currentSettings.quietHoursEnabled &&
+                !currentSettings.quietAllowTimers &&
+                window().contains(LocalTime.now())
+        }
+    }
+
+    /** One collector pushes each settings change to every consumer. */
+    private fun wireSettingsIntoConsumers() {
+        settingsRepository.settings
+            .onEach { settings ->
+                currentSettings = settings
+                speakingClockController.speakingStyle = settings.speakingStyle
+                speakingClockController.defaultAutoOff =
+                    Duration.ofMinutes(settings.autoOffMinutes.toLong())
+                speakingClockController.lastCustomInterval =
+                    settings.lastCustomIntervalSeconds
+                        ?.takeIf { it in SpeakInterval.MIN_SECONDS..SpeakInterval.MAX_SECONDS }
+                        ?.let(::SpeakInterval)
+                timerController.selectSchedule(
+                    AnnouncementSchedule.BUILT_INS.find { it.name == settings.timerScheduleName }
+                        ?: AnnouncementSchedule.GAME,
+                )
+                timerController.restoreLastDuration(
+                    Duration.ofSeconds(settings.lastTimerDurationSeconds),
+                )
+                stopwatchController.setAnnounceEvery(
+                    settings.stopwatchAnnounceEverySeconds
+                        .takeIf { it > 0 }
+                        ?.let { Duration.ofSeconds(it.toLong()) },
+                )
+                stopwatchController.setSpeakLaps(settings.stopwatchSpeakLaps)
+                ttsSpeaker.setRate(settings.ttsRate)
+                ttsSpeaker.setPitch(settings.ttsPitch)
+            }
+            .launchIn(appScope)
+    }
+
+    /**
+     * Persist progress so a killed process restores honestly. Saves are
+     * throttled to whole-second changes (distinctUntilChanged), cleared the
+     * moment a run is reset — a stale save must never resurrect a dismissed
+     * timer.
+     */
+    private fun wireEnginePersistence() {
+        timerController.state
+            .map { st ->
+                Triple(st.snapshot.phase, st.snapshot.duration, st.snapshot.remaining.seconds)
+            }
+            .distinctUntilChanged()
+            .onEach { (phase, duration, _) ->
+                when (phase) {
+                    TimerEngine.Phase.Idle -> engineStateStore.clearTimer()
+                    else -> engineStateStore.saveTimer(
+                        duration,
+                        timerController.state.value.snapshot.remaining,
+                    )
+                }
+                // The keypad prefill persists too.
+                if (phase != TimerEngine.Phase.Idle) {
+                    settingsRepository.setLastTimerDuration(duration.seconds)
+                }
+            }
+            .launchIn(appScope)
+
+        stopwatchController.state
+            .map { st -> Pair(st.snapshot.phase, st.snapshot.elapsed.seconds) }
+            .distinctUntilChanged()
+            .onEach { (phase, _) ->
+                when (phase) {
+                    StopwatchEngine.Phase.Idle -> engineStateStore.clearStopwatch()
+                    else -> engineStateStore.saveStopwatch(
+                        stopwatchController.state.value.snapshot.elapsed,
+                        stopwatchController.state.value.snapshot.laps,
+                    )
+                }
+            }
+            .launchIn(appScope)
+
+        // Persist the speaking clock's last custom interval when it changes.
+        speakingClockController.state
+            .map { speakingClockController.lastCustomInterval }
+            .distinctUntilChanged()
+            .onEach { custom ->
+                custom?.let { settingsRepository.setLastCustomInterval(it.seconds) }
+            }
+            .launchIn(appScope)
+    }
+
+    /** Bring back interrupted runs (as paused — see the controllers' docs). */
+    private fun restoreSavedState() {
+        appScope.launch {
+            engineStateStore.loadTimer()?.let { saved ->
+                timerController.restorePaused(saved.duration, saved.remaining)
+            }
+            engineStateStore.loadStopwatch()?.let { saved ->
+                if (!saved.elapsed.isZero) {
+                    stopwatchController.restorePaused(saved.elapsed, saved.laps)
+                }
+            }
+        }
     }
 }

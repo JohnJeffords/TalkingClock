@@ -49,6 +49,9 @@ android {
 
     buildFeatures {
         compose = true
+        // BuildConfig carries VERSION_NAME to the About screen. (Off by
+        // default since AGP 8; we opt in for this one constant.)
+        buildConfig = true
     }
 
     testOptions {

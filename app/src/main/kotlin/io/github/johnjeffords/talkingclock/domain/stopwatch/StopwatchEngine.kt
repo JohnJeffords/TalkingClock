@@ -69,6 +69,18 @@ class StopwatchEngine(private val monotonicMs: () -> Long) {
         laps = mutableListOf()
     }
 
+    /**
+     * Recreate a PAUSED stopwatch from persisted values (process-death
+     * restore — same always-comes-back-paused rule as the timer; see
+     * TimerEngine.restorePaused).
+     */
+    fun restorePaused(elapsed: Duration, restoredLaps: List<Lap>) {
+        require(!elapsed.isNegative) { "Elapsed can't be negative" }
+        accumulatedMs = elapsed.toMillis()
+        anchorMs = null
+        laps = restoredLaps.toMutableList()
+    }
+
     fun snapshot(): Snapshot {
         val elapsed = currentElapsed()
         val phase = when {

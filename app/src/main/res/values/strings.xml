@@ -86,6 +86,73 @@
     <string name="stopwatch_fastest">Fastest</string>
     <string name="stopwatch_slowest">Slowest</string>
 
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_section_clock">Clock</string>
+    <string name="settings_section_timer">Timer</string>
+    <string name="settings_section_stopwatch">Stopwatch</string>
+    <string name="settings_section_voice">Voice</string>
+    <string name="settings_section_display">Display</string>
+    <string name="settings_section_behavior">Behavior</string>
+    <string name="settings_section_about">About</string>
+    <string name="settings_time_format">Time format</string>
+    <string name="settings_show_seconds">Show seconds</string>
+    <string name="settings_show_date">Show date</string>
+    <string name="settings_speaking_style">Speaking style</string>
+    <string name="settings_auto_off">Speaking clock auto-off</string>
+    <string name="settings_auto_off_value">%1$d min</string>
+    <string name="settings_timer_schedule">Default announcements</string>
+    <string name="settings_sw_announce">Speak elapsed time</string>
+    <string name="settings_sw_speak_laps">Speak laps</string>
+    <string name="settings_voice">Voice &amp; speech</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_quiet_hours">Quiet hours</string>
+    <string name="settings_quiet_value">%1$s – %2$s</string>
+    <string name="settings_quiet_off">Off</string>
+    <string name="settings_about">About Talking Clock</string>
+    <string name="settings_off">Off</string>
+    <string name="settings_back">Back</string>
+
+    <string name="theme_system">Follow system</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_amoled">Black (AMOLED)</string>
+    <string name="format_system">Follow system</string>
+    <string name="format_12h">12-hour</string>
+    <string name="format_24h">24-hour</string>
+    <string name="style_conversational">Conversational</string>
+    <string name="style_digits">Digits</string>
+    <string name="style_formal">Formal</string>
+    <string name="style_24h">24-hour</string>
+
+    <!-- Speaking style picker -->
+    <string name="style_screen_hint">How should 10:24 be spoken?</string>
+    <string name="style_play_preview">Hear a preview</string>
+
+    <!-- Voice & speech screen -->
+    <string name="voice_source">Voice source</string>
+    <string name="voice_source_system">System text-to-speech</string>
+    <string name="voice_rate">Speech rate</string>
+    <string name="voice_pitch">Pitch</string>
+    <string name="voice_test">Test voice</string>
+    <string name="voice_import_pack">Import voice pack…</string>
+
+    <!-- Quiet hours screen -->
+    <string name="quiet_enable">Quiet hours</string>
+    <string name="quiet_enable_subtitle">The clock stays silent during this window</string>
+    <string name="quiet_from">From</string>
+    <string name="quiet_until">Until</string>
+    <string name="quiet_allow_timers">Timers still speak</string>
+    <string name="quiet_allow_timers_subtitle">A running timer\'s announcements ignore quiet hours</string>
+
+    <!-- About screen -->
+    <string name="about_version">Version %1$s</string>
+    <string name="about_license">License: GPL-3.0-or-later</string>
+    <string name="about_source">Source code</string>
+    <string name="about_report_issue">Report an issue</string>
+    <string name="about_privacy_title">Nothing leaves your phone</string>
+    <string name="about_privacy_body">This app has no internet permission — no ads, no trackers, no accounts, no data collection. Everything happens on your device.</string>
+
     <!-- Placeholder screens (built in later milestones) -->
     <string name="coming_soon">Coming soon</string>
 </resources>

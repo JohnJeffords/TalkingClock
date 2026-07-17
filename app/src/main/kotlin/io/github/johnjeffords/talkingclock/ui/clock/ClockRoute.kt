@@ -23,7 +23,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.johnjeffords.talkingclock.TalkingClockApp
 import io.github.johnjeffords.talkingclock.domain.announce.SpeakInterval
 import io.github.johnjeffords.talkingclock.domain.speech.Phrasebook
-import io.github.johnjeffords.talkingclock.domain.speech.SpeakingStyle
 import java.time.LocalTime
 
 /**
@@ -39,10 +38,11 @@ fun ClockRoute() {
     val context = LocalContext.current
     val speaker = (context.applicationContext as TalkingClockApp).speaker
 
-    // Match the device's 12/24-hour system setting. Reading it here (rather
-    // than inside the ViewModel) keeps the ViewModel free of Android classes.
+    // Report the device's 12/24-hour preference (used when the time-format
+    // setting says "follow system"). Reading it here (rather than inside the
+    // ViewModel) keeps the ViewModel free of Android classes.
     LaunchedEffect(Unit) {
-        viewModel.setUse24Hour(DateFormat.is24HourFormat(context))
+        viewModel.setSystemUses24Hour(DateFormat.is24HourFormat(context))
     }
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -90,10 +90,14 @@ fun ClockRoute() {
         animationsEnabled = animationsEnabled,
         onSpeakNow = {
             // Speak the time AT THE MOMENT OF THE TAP (not the displayed
-            // tick, which can be up to a second old). Speaking style becomes
-            // a setting in M6.
+            // tick, which can be up to a second old), in the user's chosen
+            // speaking style.
+            val app = context.applicationContext as TalkingClockApp
             speaker.speak(
-                Phrasebook.timeAnnouncement(LocalTime.now(), SpeakingStyle.Conversational),
+                Phrasebook.timeAnnouncement(
+                    LocalTime.now(),
+                    app.currentSettings.speakingStyle,
+                ),
             )
         },
         onSelectInterval = { interval ->

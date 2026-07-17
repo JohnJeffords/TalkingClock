@@ -68,6 +68,22 @@ class TimerEngine(private val monotonicMs: () -> Long) {
         anchorMs = null
     }
 
+    /**
+     * Recreate a PAUSED run from persisted values — the process-death
+     * restore path. Monotonic anchors are only meaningful within one boot
+     * of one process, so a restored timer always comes back paused at its
+     * last known remaining time and the user resumes it deliberately.
+     */
+    fun restorePaused(duration: Duration, remaining: Duration) {
+        require(!duration.isNegative && !duration.isZero) { "Timer needs a positive duration" }
+        require(!remaining.isNegative && remaining <= duration) {
+            "Remaining must be within 0..duration"
+        }
+        durationMs = duration.toMillis()
+        accumulatedMs = duration.toMillis() - remaining.toMillis()
+        anchorMs = null
+    }
+
     /** The current truth, derived (not stored) — see class doc. */
     fun snapshot(): Snapshot {
         if (durationMs == 0L) {

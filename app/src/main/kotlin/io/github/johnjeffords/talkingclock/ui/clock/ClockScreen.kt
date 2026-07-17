@@ -71,8 +71,9 @@ fun ClockScreen(
         Spacer(Modifier.height(28.dp))
 
         // Date line — regular (non-mono) font, muted color, top of screen.
+        // A setting can hide it; the empty Text keeps the layout stable.
         Text(
-            text = readout?.date.orEmpty(),
+            text = if (uiState.showDate) readout?.date.orEmpty() else "",
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
