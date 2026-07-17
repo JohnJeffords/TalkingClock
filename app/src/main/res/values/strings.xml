@@ -16,6 +16,11 @@
     <string name="clock_interval_off">Off</string>
     <string name="clock_no_announcements">No announcements scheduled</string>
 
+    <!-- No-TTS-engine warning (GrapheneOS/CalyxOS ship without one) -->
+    <string name="no_engine_title">No speech engine found</string>
+    <string name="no_engine_body">This phone has no text-to-speech engine, so the clock can\'t talk yet. Install a free, fully offline engine like RHVoice or eSpeak NG.</string>
+    <string name="no_engine_install">Get a free engine</string>
+
     <!-- Placeholder screens (built in later milestones) -->
     <string name="coming_soon">Coming soon</string>
 </resources>

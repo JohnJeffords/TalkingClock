@@ -30,6 +30,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.johnjeffords.talkingclock.R
 import io.github.johnjeffords.talkingclock.domain.time.ClockReadout
+import io.github.johnjeffords.talkingclock.speech.SpeakerState
+import io.github.johnjeffords.talkingclock.ui.components.NoSpeechEngineCard
 import io.github.johnjeffords.talkingclock.ui.theme.ClockHeroTextStyle
 import io.github.johnjeffords.talkingclock.ui.theme.ClockSecondsTextStyle
 
@@ -50,12 +52,17 @@ import io.github.johnjeffords.talkingclock.ui.theme.ClockSecondsTextStyle
  * where the ambiguity would actually matter.
  *
  * @param readout the formatted time to display, or null before the first tick.
+ * @param speakerState where the speech engine is in its lifecycle; the
+ *   no-engine warning card appears for [SpeakerState.NoEngine]/[SpeakerState.Error].
  * @param onSpeakNow invoked when the user taps the time to hear it spoken.
+ * @param onInstallEngine invoked from the warning card's install button.
  */
 @Composable
 fun ClockScreen(
     readout: ClockReadout?,
+    speakerState: SpeakerState,
     onSpeakNow: () -> Unit,
+    onInstallEngine: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -123,6 +130,13 @@ fun ClockScreen(
         }
 
         Spacer(Modifier.weight(1f))
+
+        // A clock that can't talk should say so right here, not only in
+        // settings: warn when the phone has no working speech engine.
+        if (speakerState == SpeakerState.NoEngine || speakerState == SpeakerState.Error) {
+            NoSpeechEngineCard(onInstallEngine = onInstallEngine)
+            Spacer(Modifier.height(12.dp))
+        }
 
         // The "Speak every" control (OFF state) near the bottom, then the
         // status caption. The armed state, dropdown, and countdown arrive

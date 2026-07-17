@@ -1,16 +1,31 @@
 package io.github.johnjeffords.talkingclock
 
 import android.app.Application
+import io.github.johnjeffords.talkingclock.speech.Speaker
+import io.github.johnjeffords.talkingclock.speech.TtsSpeaker
 
 /**
  * The Application object — created once when the app process starts, before
- * any Activity. It's currently empty, but it's the place the app's shared
- * dependencies (settings store, the speech engine, the timer engine) will be
- * wired together by hand in a small "AppContainer" as those features land.
- *
- * We use manual dependency injection (a plain container) rather than a DI
- * framework like Hilt: this app is small enough that a framework would add
- * build time, APK size, and indirection without paying for itself
- * (see docs/ARCHITECTURE.md).
+ * any Activity. It owns the app's shared dependencies, wired together by
+ * hand (manual dependency injection: this app is small enough that a DI
+ * framework like Hilt would add build time, APK size, and indirection
+ * without paying for itself — see docs/ARCHITECTURE.md).
  */
-class TalkingClockApp : Application()
+class TalkingClockApp : Application() {
+
+    /**
+     * The one app-wide speech engine. Created EAGERLY at process start
+     * rather than lazily on first use: TTS initialization is asynchronous
+     * and takes a moment, so warming it here means the user's very first
+     * tap-to-speak actually speaks instead of merely starting the engine.
+     * The OS reclaims it with the process; no explicit shutdown needed for
+     * an app-lifetime singleton.
+     */
+    lateinit var speaker: Speaker
+        private set
+
+    override fun onCreate() {
+        super.onCreate()
+        speaker = TtsSpeaker.create(this)
+    }
+}

@@ -8,6 +8,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.captureRoboImage
 import io.github.johnjeffords.talkingclock.domain.time.ClockReadout
+import io.github.johnjeffords.talkingclock.speech.SpeakerState
 import io.github.johnjeffords.talkingclock.ui.theme.TalkingClockTheme
 import io.github.johnjeffords.talkingclock.ui.theme.ThemeChoice
 import org.junit.Rule
@@ -63,7 +64,21 @@ class ClockScreenScreenshotTest {
         captureClockScreen(ThemeChoice.Light, "src/test/screenshots/clock_off_light.png")
     }
 
-    private fun captureClockScreen(theme: ThemeChoice, outputPath: String) {
+    @Test
+    fun clockScreen_noEngine_dark() {
+        // The GrapheneOS/CalyxOS out-of-box state: warning card visible.
+        captureClockScreen(
+            ThemeChoice.Dark,
+            "src/test/screenshots/clock_no_engine_dark.png",
+            speakerState = SpeakerState.NoEngine,
+        )
+    }
+
+    private fun captureClockScreen(
+        theme: ThemeChoice,
+        outputPath: String,
+        speakerState: SpeakerState = SpeakerState.Ready,
+    ) {
         composeRule.setContent {
             TalkingClockTheme(theme) {
                 // Paint the BACKGROUND color behind the screen, matching what
@@ -74,7 +89,12 @@ class ClockScreenScreenshotTest {
                     color = MaterialTheme.colorScheme.background,
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    ClockScreen(readout = sampleReadout, onSpeakNow = {})
+                    ClockScreen(
+                        readout = sampleReadout,
+                        speakerState = speakerState,
+                        onSpeakNow = {},
+                        onInstallEngine = {},
+                    )
                 }
             }
         }
