@@ -4,6 +4,16 @@ Build order with a definition of done per milestone. Work top to bottom —
 each milestone leaves the app shippable-ish (building, tested, honest).
 Update the **Status** column in the same PR that changes it.
 
+> **All milestones M0–M8 are code-complete as of 2026-07-17** (builds green,
+> unit + Roborazzi screenshot + emulator-smoke CI passing; release APK
+> 1.37 MB). **Remaining work is tracked as GitHub issues**, not in this doc
+> or an in-chat list — see <https://github.com/JohnJeffords/TalkingClock/issues>.
+> The open items are: the QA/on-device verification pass (#1, #2), four
+> deferred sub-features (checkpoint editor #3, seven-segment style #4, hourly
+> chime #5, haptics #6), a reference voice pack #7, localization #8, and the
+> owner-gated release steps (signing #9, Play #10, F-Droid #11, privacy
+> hosting #12).
+
 | # | Milestone | Status |
 |---|---|---|
 | M0 | Dev environment + project skeleton | **done** (2026-07-16, CI green) |
