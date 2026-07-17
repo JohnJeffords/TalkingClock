@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import io.github.johnjeffords.talkingclock.R
 import io.github.johnjeffords.talkingclock.ui.clock.ClockRoute
+import io.github.johnjeffords.talkingclock.ui.stopwatch.StopwatchRoute
 import io.github.johnjeffords.talkingclock.ui.timer.TimerRoute
 import kotlinx.coroutines.launch
 
@@ -120,7 +121,7 @@ fun TalkingClockRoot() {
                 when (selectedTab) {
                     HomeTab.Clock -> ClockRoute()
                     HomeTab.Timer -> TimerRoute()
-                    HomeTab.Stopwatch -> ComingSoon(stringResource(R.string.nav_stopwatch))
+                    HomeTab.Stopwatch -> StopwatchRoute()
                 }
             }
         }

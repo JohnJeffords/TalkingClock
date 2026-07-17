@@ -3,6 +3,7 @@ package io.github.johnjeffords.talkingclock
 import android.app.Application
 import android.os.SystemClock
 import io.github.johnjeffords.talkingclock.announce.SpeakingClockController
+import io.github.johnjeffords.talkingclock.announce.StopwatchController
 import io.github.johnjeffords.talkingclock.announce.TimerController
 import io.github.johnjeffords.talkingclock.service.AnnouncerService
 import io.github.johnjeffords.talkingclock.speech.Speaker
@@ -45,6 +46,10 @@ class TalkingClockApp : Application() {
     lateinit var timerController: TimerController
         private set
 
+    /** The one stopwatch. */
+    lateinit var stopwatchController: StopwatchController
+        private set
+
     /** Process-lifetime scope for the announce loops. SupervisorJob so a
      *  crashed child never kills unrelated app-scope work. */
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -61,6 +66,12 @@ class TalkingClockApp : Application() {
         timerController = TimerController(
             // Monotonic time for the countdown — never the wall clock
             // (docs/ARCHITECTURE.md → Timekeeping rules).
+            monotonicMs = SystemClock::elapsedRealtime,
+            speaker = speaker,
+            scope = appScope,
+            ensureServiceRunning = { AnnouncerService.ensureRunning(this) },
+        )
+        stopwatchController = StopwatchController(
             monotonicMs = SystemClock::elapsedRealtime,
             speaker = speaker,
             scope = appScope,

@@ -15,7 +15,9 @@ import io.github.johnjeffords.talkingclock.MainActivity
 import io.github.johnjeffords.talkingclock.R
 import io.github.johnjeffords.talkingclock.TalkingClockApp
 import io.github.johnjeffords.talkingclock.announce.SpeakingClockController
+import io.github.johnjeffords.talkingclock.announce.StopwatchController
 import io.github.johnjeffords.talkingclock.announce.TimerController
+import io.github.johnjeffords.talkingclock.domain.stopwatch.StopwatchEngine
 import io.github.johnjeffords.talkingclock.domain.timer.TimerEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -52,6 +54,7 @@ class AnnouncerService : Service() {
     private val app get() = application as TalkingClockApp
     private val clockController: SpeakingClockController get() = app.speakingClockController
     private val timerController: TimerController get() = app.timerController
+    private val stopwatchController: StopwatchController get() = app.stopwatchController
 
     /** Scope for observing controller state; dies with the service. */
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -76,15 +79,26 @@ class AnnouncerService : Service() {
             ACTION_RESUME_TIMER -> {
                 timerController.resume(); return START_NOT_STICKY
             }
+            ACTION_PAUSE_STOPWATCH -> {
+                // Pausing the stopwatch may leave nothing running at all.
+                stopwatchController.pause(); maybeStop(); return START_NOT_STICKY
+            }
+            ACTION_LAP_STOPWATCH -> {
+                stopwatchController.lap(); return START_NOT_STICKY
+            }
         }
 
         // Enter the foreground with the typed FGS declaration API 34 requires.
         enterForeground(buildForegroundNotification())
 
-        // Track both controllers. The notification-worthy fields change at
-        // most once a second (whole seconds remaining), so distinctUntilChanged
-        // keeps us from re-notifying at the timer's 5 Hz sampling rate.
-        combine(clockController.state, timerController.state) { clock, timer ->
+        // Track all three controllers. The notification-worthy fields change
+        // at most once a second (whole-second text), so distinctUntilChanged
+        // keeps us from re-notifying at the 5–10 Hz sampling rates.
+        combine(
+            clockController.state,
+            timerController.state,
+            stopwatchController.state,
+        ) { clock, timer, stopwatch ->
             DisplayState(
                 clockArmed = clock.isArmed,
                 clockLine = clock.interval?.let { interval ->
@@ -96,6 +110,11 @@ class AnnouncerService : Service() {
                 },
                 timerPhase = timer.snapshot.phase,
                 timerLine = timerLine(timer),
+                stopwatchRunning = stopwatch.snapshot.phase == StopwatchEngine.Phase.Running,
+                stopwatchLine = getString(
+                    R.string.notif_stopwatch_elapsed,
+                    formatMinSec(stopwatch.snapshot.elapsed),
+                ),
             )
         }
             .distinctUntilChanged()
@@ -122,31 +141,41 @@ class AnnouncerService : Service() {
         val clockLine: String?,
         val timerPhase: TimerEngine.Phase,
         val timerLine: String?,
+        val stopwatchRunning: Boolean,
+        val stopwatchLine: String?,
     )
 
     private fun render(display: DisplayState) {
         val timerAlive = display.timerPhase != TimerEngine.Phase.Idle
-        if (!timerAlive && !display.clockArmed) {
+        if (!timerAlive && !display.clockArmed && !display.stopwatchRunning) {
             stopSelf()
             return
         }
 
         val manager = getSystemService(NotificationManager::class.java)
 
-        // Foreground slot (ID 1): the timer when alive, else the clock.
+        // Foreground slot (ID 1): highest-urgency active feature
+        // (timer > stopwatch > clock — see buildForegroundNotification).
         manager.notify(FOREGROUND_ID, buildForegroundNotification())
 
-        // Companion slot (ID 2): the clock, only while the timer holds ID 1.
-        if (timerAlive && display.clockArmed) {
-            manager.notify(COMPANION_ID, buildClockNotification())
+        // Companion slots for whatever else is active alongside it.
+        if (display.stopwatchRunning && timerAlive) {
+            manager.notify(COMPANION_STOPWATCH_ID, buildStopwatchNotification())
         } else {
-            manager.cancel(COMPANION_ID)
+            manager.cancel(COMPANION_STOPWATCH_ID)
+        }
+        if (display.clockArmed && (timerAlive || display.stopwatchRunning)) {
+            manager.notify(COMPANION_CLOCK_ID, buildClockNotification())
+        } else {
+            manager.cancel(COMPANION_CLOCK_ID)
         }
     }
 
     private fun maybeStop() {
         val timerAlive = timerController.state.value.snapshot.phase != TimerEngine.Phase.Idle
-        if (!timerAlive && !clockController.state.value.isArmed) stopSelf()
+        val stopwatchRunning =
+            stopwatchController.state.value.snapshot.phase == StopwatchEngine.Phase.Running
+        if (!timerAlive && !stopwatchRunning && !clockController.state.value.isArmed) stopSelf()
     }
 
     private fun enterForeground(notification: Notification) {
@@ -165,11 +194,25 @@ class AnnouncerService : Service() {
 
     private fun buildForegroundNotification(): Notification {
         val timer = timerController.state.value
-        return if (timer.snapshot.phase != TimerEngine.Phase.Idle) {
-            buildTimerNotification(timer)
-        } else {
-            buildClockNotification()
+        val stopwatchRunning =
+            stopwatchController.state.value.snapshot.phase == StopwatchEngine.Phase.Running
+        return when {
+            timer.snapshot.phase != TimerEngine.Phase.Idle -> buildTimerNotification(timer)
+            stopwatchRunning -> buildStopwatchNotification()
+            else -> buildClockNotification()
         }
+    }
+
+    /** "Stopwatch · 4:37 elapsed" with Lap + Pause actions. */
+    private fun buildStopwatchNotification(): Notification {
+        val elapsed = stopwatchController.state.value.snapshot.elapsed
+        return baseBuilder()
+            .setContentTitle(getString(R.string.notif_stopwatch_title))
+            .setContentText(getString(R.string.notif_stopwatch_elapsed, formatMinSec(elapsed)))
+            .setContentIntent(openAppIntent())
+            .addAction(action(R.string.notif_action_lap, ACTION_LAP_STOPWATCH))
+            .addAction(action(R.string.notif_action_pause, ACTION_PAUSE_STOPWATCH))
+            .build()
     }
 
     /** "Timer · 12:34 remaining" with Pause/Resume + Stop (design frame 13). */
@@ -273,12 +316,15 @@ class AnnouncerService : Service() {
     companion object {
         private const val CHANNEL_ID = "speaking_clock"
         private const val FOREGROUND_ID = 1
-        private const val COMPANION_ID = 2
+        private const val COMPANION_CLOCK_ID = 2
+        private const val COMPANION_STOPWATCH_ID = 3
         private const val PKG = "io.github.johnjeffords.talkingclock"
         private const val ACTION_STOP_CLOCK = "$PKG.STOP_CLOCK"
         private const val ACTION_STOP_TIMER = "$PKG.STOP_TIMER"
         private const val ACTION_PAUSE_TIMER = "$PKG.PAUSE_TIMER"
         private const val ACTION_RESUME_TIMER = "$PKG.RESUME_TIMER"
+        private const val ACTION_PAUSE_STOPWATCH = "$PKG.PAUSE_STOPWATCH"
+        private const val ACTION_LAP_STOPWATCH = "$PKG.LAP_STOPWATCH"
 
         private val TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("H:mm")
 

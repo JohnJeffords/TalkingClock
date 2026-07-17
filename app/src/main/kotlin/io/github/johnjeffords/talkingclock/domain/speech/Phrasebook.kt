@@ -133,6 +133,20 @@ object Phrasebook {
     private fun unit(n: Int, unitName: String): String =
         "${numberWords(n)} $unitName${if (n == 1) "" else "s"}"
 
+    // --- Stopwatch phrases ---------------------------------------------------
+
+    /** "Lap three: one minute, two seconds" (spoken on Lap when enabled). */
+    fun stopwatchLap(lapNumber: Int, lapTime: java.time.Duration): String {
+        // Marathon-grade lap counts overflow the word table; digits read fine.
+        val numberPart = if (lapNumber in 0..59) numberWords(lapNumber) else "$lapNumber"
+        return "Lap $numberPart: ${durationWords(lapTime)}"
+    }
+
+    /** The elapsed-time announcement: "Five minutes" / "One minute, thirty
+     *  seconds" — deliberately bare (design: away-from-phone glanceability). */
+    fun stopwatchElapsed(elapsed: java.time.Duration): String =
+        durationWords(elapsed).replaceFirstChar(Char::uppercase)
+
     // --- Number-to-words (0..59 is all a clock needs) -----------------------
 
     private val ones = listOf(

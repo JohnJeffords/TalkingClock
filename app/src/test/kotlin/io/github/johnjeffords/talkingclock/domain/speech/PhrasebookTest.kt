@@ -193,6 +193,32 @@ class PhrasebookTest {
         )
     }
 
+    // --- Stopwatch phrases ---
+
+    @Test
+    fun `lap announcements name the lap and its time`() {
+        assertEquals(
+            "Lap three: one minute, two seconds",
+            Phrasebook.stopwatchLap(3, java.time.Duration.ofSeconds(62)),
+        )
+    }
+
+    @Test
+    fun `huge lap numbers fall back to digits`() {
+        assertEquals(
+            "Lap 100: thirty seconds",
+            Phrasebook.stopwatchLap(100, java.time.Duration.ofSeconds(30)),
+        )
+    }
+
+    @Test
+    fun `elapsed announcement is the bare duration`() {
+        assertEquals(
+            "Five minutes",
+            Phrasebook.stopwatchElapsed(java.time.Duration.ofMinutes(5)),
+        )
+    }
+
     // --- Number words ---
 
     @Test
