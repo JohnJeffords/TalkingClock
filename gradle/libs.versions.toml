@@ -21,6 +21,7 @@ datastore = "1.1.1"
 # --- Testing ---
 junit = "4.13.2"
 androidxTestCore = "1.6.1"
+androidxTestJunit = "1.2.1"
 robolectric = "4.14.1"      # runs Android-framework code on the plain JVM (no emulator)
 roborazzi = "1.30.0"        # JVM screenshot tests (goldens compared to design references)
 
@@ -53,6 +54,7 @@ roborazzi-compose = { group = "io.github.takahirom.roborazzi", name = "roborazzi
 roborazzi-junit-rule = { group = "io.github.takahirom.roborazzi", name = "roborazzi-junit-rule", version.ref = "roborazzi" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestJunit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

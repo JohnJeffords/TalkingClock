@@ -6,10 +6,10 @@ Update the **Status** column in the same PR that changes it.
 
 | # | Milestone | Status |
 |---|---|---|
-| M0 | Dev environment + project skeleton | in progress (2026-07-16) |
-| M1 | Walking skeleton: ticking clock screen | in progress (2026-07-16) |
-| M2 | Speech pipeline (TTS wrapper + phrasebook) | not started |
-| M3 | Speaking clock: intervals + foreground service + auto-off | not started |
+| M0 | Dev environment + project skeleton | **done** (2026-07-16, CI green) |
+| M1 | Walking skeleton: ticking clock screen | **done** (2026-07-16) |
+| M2 | Speech pipeline (TTS wrapper + phrasebook) | **done** (2026-07-16) — on-device speech check still pending (needs the owner's phone) |
+| M3 | Speaking clock: intervals + foreground service + auto-off | **built + unit/golden tested** (2026-07-17) — screen-off soak test pending on-device |
 | M4 | Talking timer | not started |
 | M5 | Stopwatch | not started |
 | M6 | Settings + theming + accessibility (incl. speaking-style, quiet hours) | not started |

@@ -91,4 +91,9 @@ dependencies {
     testImplementation(libs.roborazzi.junit.rule)
     testImplementation(libs.androidx.compose.ui.tooling)          // ComposeView host for screenshots
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+    // --- Instrumented smoke tests (run on emulators in CI, or a real phone) ---
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
 }
