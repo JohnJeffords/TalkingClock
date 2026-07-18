@@ -131,7 +131,7 @@ object Phrasebook {
 
     /** "one minute" / "five minutes" — number words + pluralized unit. */
     private fun unit(n: Int, unitName: String): String =
-        "${numberWords(n)} $unitName${if (n == 1) "" else "s"}"
+        "${if (n in 0..59) numberWords(n) else n} $unitName${if (n == 1) "" else "s"}"
 
     // --- Stopwatch phrases ---------------------------------------------------
 

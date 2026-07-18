@@ -161,7 +161,7 @@ class TalkingClockApp : Application() {
                 }
             },
             onArmSpeakingClock = { alarm ->
-                // The signature feature: the moment the alarm rings, the
+                // The signature feature: when the alarm is dismissed, the
                 // speaking clock starts and runs while the user gets ready
                 // (design frame 24's amber card). Auto-off ends it.
                 alarm.handoffIntervalSeconds?.let { seconds ->
@@ -170,10 +170,6 @@ class TalkingClockApp : Application() {
                         autoOff = Duration.ofMinutes(alarm.handoffMinutes.toLong()),
                     )
                 }
-            },
-            onQuietSpeakingClock = {
-                // Snooze silences the handoff clock until the next ring.
-                speakingClockController.disarm()
             },
         )
 

@@ -163,4 +163,16 @@ class TimerControllerTest {
         runCurrent()
         assertEquals(Duration.ofMinutes(7), controller.state.value.lastDuration)
     }
+
+    @Test
+    fun `a sixty-hour timer starts without crashing its announcement`() = runTest {
+        val controller = buildController()
+
+        controller.start(Duration.ofHours(60))
+        runCurrent()
+
+        assertEquals(listOf("Timer started: 60 hours"), speaker.spoken)
+        assertEquals(TimerEngine.Phase.Running, controller.state.value.snapshot.phase)
+        assertEquals(1, servicePokes)
+    }
 }

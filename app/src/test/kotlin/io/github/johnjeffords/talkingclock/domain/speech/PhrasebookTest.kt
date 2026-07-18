@@ -191,6 +191,10 @@ class PhrasebookTest {
             "Timer started: one hour, thirty minutes",
             Phrasebook.timerStarted(java.time.Duration.ofMinutes(90)),
         )
+        assertEquals(
+            "Timer started: 60 hours",
+            Phrasebook.timerStarted(java.time.Duration.ofHours(60)),
+        )
     }
 
     // --- Stopwatch phrases ---

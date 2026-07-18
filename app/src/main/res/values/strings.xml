@@ -173,14 +173,14 @@
     <string name="alarm_announce_time">Announce the time when ringing</string>
     <string name="alarm_vibrate">Vibrate</string>
     <string name="alarm_handoff_title">Start the speaking clock</string>
-    <string name="alarm_handoff_body">The moment this alarm rings, the clock starts announcing the time and keeps going while you get ready</string>
+    <string name="alarm_handoff_body">When you dismiss this alarm, the clock starts announcing the time and keeps going while you get ready</string>
     <string name="alarm_handoff_value">Announcing %1$s · tap to change</string>
     <string name="alarm_handoff_interval">Handoff interval</string>
     <string name="alarm_save">Save</string>
     <string name="alarm_delete">Delete alarm</string>
     <string name="alarm_snooze">Snooze</string>
     <string name="alarm_dismiss">Dismiss</string>
-    <string name="alarm_handoff_note">The speaking clock is on — it keeps announcing the time as you get ready</string>
+    <string name="alarm_handoff_note">Dismiss to start the speaking clock while you get ready</string>
     <string name="alarm_speaks_time">Announces the time on ring</string>
     <string name="alarm_speaks_handoff">Starts speaking clock · %1$s</string>
     <string name="alarm_speaks_sound_only">Sound only</string>
