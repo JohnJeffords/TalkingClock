@@ -125,7 +125,7 @@ class SpeakingClockController(
     fun disarm() {
         announceJob?.cancel()
         announceJob = null
-        announcer.stop()
+        announcer.stop(Speaker.PRIORITY_CLOCK)
         stateFlow.value = State()
     }
 

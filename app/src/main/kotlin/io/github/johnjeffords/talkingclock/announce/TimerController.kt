@@ -133,7 +133,7 @@ class TimerController(
     fun reset() {
         stopTickLoop()
         engine.reset()
-        announcer.stop()
+        announcer.stop(Speaker.PRIORITY_TIMER)
         publish()
     }
 

@@ -78,7 +78,7 @@ class AlarmRinger(
                 while (true) {
                     announcer.announce(
                         Utterance.TimeAnnouncement(LocalTime.now(), speakingStyle()),
-                        Speaker.PRIORITY_TIMER,
+                        Speaker.PRIORITY_ALARM,
                     )
                     delay(ANNOUNCE_EVERY_MS)
                 }
@@ -120,7 +120,7 @@ class AlarmRinger(
     private fun stopEffects() {
         announceJob?.cancel()
         announceJob = null
-        announcer.stop()
+        announcer.stop(Speaker.PRIORITY_ALARM)
         ringtone?.stop()
         ringtone = null
         val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {

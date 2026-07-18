@@ -139,6 +139,7 @@ class TimerControllerTest {
         assertEquals(listOf("Timer started: two minutes"), speaker.spoken)
         assertEquals(TimerEngine.Phase.Idle, controller.state.value.snapshot.phase)
         assertTrue(speaker.stopCount >= 1)
+        assertEquals(listOf(Speaker.PRIORITY_TIMER), speaker.stoppedPriorities)
     }
 
     @Test

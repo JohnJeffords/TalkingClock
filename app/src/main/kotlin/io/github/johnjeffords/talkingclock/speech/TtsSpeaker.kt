@@ -120,6 +120,11 @@ class TtsSpeaker(
     }
 
     @Synchronized
+    override fun stop(priority: Int) {
+        if (speakingPriority == priority) stop()
+    }
+
+    @Synchronized
     override fun shutdown() {
         tts.stop()
         tts.shutdown()

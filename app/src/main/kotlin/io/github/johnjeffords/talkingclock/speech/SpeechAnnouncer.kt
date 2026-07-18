@@ -36,4 +36,9 @@ class SpeechAnnouncer(
         activePack()?.stop()
         speaker.stop()
     }
+
+    override fun stop(priority: Int) {
+        activePack()?.stop(priority)
+        speaker.stop(priority)
+    }
 }

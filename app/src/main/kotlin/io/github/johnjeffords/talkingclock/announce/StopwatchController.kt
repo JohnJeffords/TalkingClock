@@ -114,7 +114,7 @@ class StopwatchController(
         tickJob?.cancel()
         tickJob = null
         engine.reset()
-        announcer.stop() // silence any milestone/lap still being spoken (as the timer's reset does)
+        announcer.stop(Speaker.PRIORITY_STOPWATCH)
         publish()
     }
 

@@ -107,6 +107,11 @@ class VoicePackPlayer(
         soundPool.release()
     }
 
+    /** Stop only when [priority] owns the utterance currently playing. */
+    fun stop(priority: Int) {
+        if (playingPriority == priority) stop()
+    }
+
     enum class PlayResult {
         Played,
         Unsupported,

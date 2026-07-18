@@ -115,6 +115,7 @@ class StopwatchControllerTest {
         advance(Duration.ofSeconds(2))
         controller.reset()
         assertTrue(speaker.stopCount >= 1)
+        assertEquals(listOf(Speaker.PRIORITY_STOPWATCH), speaker.stoppedPriorities)
     }
 
     @Test

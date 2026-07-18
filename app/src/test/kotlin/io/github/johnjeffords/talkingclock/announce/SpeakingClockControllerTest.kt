@@ -2,6 +2,7 @@ package io.github.johnjeffords.talkingclock.announce
 
 import io.github.johnjeffords.talkingclock.domain.announce.SpeakInterval
 import io.github.johnjeffords.talkingclock.speech.FakeAnnouncer
+import io.github.johnjeffords.talkingclock.speech.Speaker
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -112,6 +113,7 @@ class SpeakingClockControllerTest {
         assertEquals(emptyList<String>(), speaker.spoken)
         assertFalse(controller.state.value.isArmed)
         assertNull(controller.state.value.nextAt)
+        assertEquals(listOf(Speaker.PRIORITY_CLOCK), speaker.stoppedPriorities)
         assertEquals(1, servicePokes) // armed once; the service stops itself
     }
 
