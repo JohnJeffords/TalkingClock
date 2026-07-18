@@ -58,22 +58,24 @@ class VoicePackPlayer(
     }
 
     /**
-     * Try to voice [utterance] from clips. Returns false — and plays
-     * nothing — when the pack can't fully voice it (missing tokens or
-     * clips still loading), so the caller can fall back to TTS for the
-     * WHOLE utterance.
+     * Try to voice [utterance] from clips. [PlayResult.Unsupported] means
+     * the caller should fall back to TTS for the whole utterance;
+     * [PlayResult.Dropped] means a higher-priority pack utterance is already
+     * playing and the caller must stay silent.
      */
-    fun tryPlay(utterance: Utterance, priority: Int): Boolean {
-        val tokens = PhraseComposer.compose(pack.manifest, utterance) ?: return false
+    fun tryPlay(utterance: Utterance, priority: Int): PlayResult {
+        val tokens = PhraseComposer.compose(pack.manifest, utterance) ?: return PlayResult.Unsupported
 
         // Every needed clip must be loaded and decodable before we commit.
         val samples = tokens.map { token ->
-            val id = sampleIds[token] ?: return false
-            if (id !in synchronized(loadedSamples) { loadedSamples.toSet() }) return false
+            val id = sampleIds[token] ?: return PlayResult.Unsupported
+            if (id !in synchronized(loadedSamples) { loadedSamples.toSet() }) {
+                return PlayResult.Unsupported
+            }
             token to id
         }
 
-        if (playJob?.isActive == true && priority < playingPriority) return false
+        if (playJob?.isActive == true && priority < playingPriority) return PlayResult.Dropped
 
         playJob?.cancel()
         playingPriority = priority
@@ -88,7 +90,7 @@ class VoicePackPlayer(
                 playingPriority = Int.MIN_VALUE
             }
         }
-        return true
+        return PlayResult.Played
     }
 
     /** Stop mid-utterance. */
@@ -103,5 +105,11 @@ class VoicePackPlayer(
     fun release() {
         stop()
         soundPool.release()
+    }
+
+    enum class PlayResult {
+        Played,
+        Unsupported,
+        Dropped,
     }
 }
