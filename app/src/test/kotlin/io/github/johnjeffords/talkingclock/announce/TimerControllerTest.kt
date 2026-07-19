@@ -128,6 +128,26 @@ class TimerControllerTest {
     }
 
     @Test
+    fun `pause at a pending tick boundary cannot publish the cancelled tick`() = runTest {
+        val controller = buildController()
+        controller.start(Duration.ofMinutes(2), AnnouncementSchedule.GAME)
+        runCurrent()
+        advance(Duration.ofMillis(58_800))
+
+        // Monotonic time reaches 59 s before the pending 200 ms tick resumes.
+        // Main-thread confinement lets pause bank that instant and cancel the
+        // tick before it can combine the old anchor with the new accumulator.
+        nowMs += 200
+        controller.pause()
+        advanceTimeBy(200)
+        runCurrent()
+
+        assertEquals(TimerEngine.Phase.Paused, controller.state.value.snapshot.phase)
+        assertEquals(Duration.ofSeconds(61), controller.state.value.snapshot.remaining)
+        assertEquals(listOf("Timer started: two minutes"), speaker.spoken)
+    }
+
+    @Test
     fun `reset silences the timer and clears state`() = runTest {
         val controller = buildController()
         controller.start(Duration.ofMinutes(2))

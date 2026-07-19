@@ -7,19 +7,35 @@ import io.github.johnjeffords.talkingclock.data.SettingsRepository
 import io.github.johnjeffords.talkingclock.data.settingsDataStore
 import io.github.johnjeffords.talkingclock.domain.stopwatch.StopwatchEngine
 import io.github.johnjeffords.talkingclock.domain.timer.TimerEngine
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertSame
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 import java.time.Duration
+import kotlin.coroutines.ContinuationInterceptor
 
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class)
 class TalkingClockAppTest {
+
+    @Test
+    fun `controller scope is confined to the Android main dispatcher`() {
+        val app = TalkingClockApp()
+
+        assertSame(
+            Dispatchers.Main.immediate,
+            app.appScope.coroutineContext[ContinuationInterceptor],
+        )
+
+        app.appScope.cancel()
+    }
 
     @Test
     fun `startup applies settings and restores engines before persistence observes Idle`() = runTest {

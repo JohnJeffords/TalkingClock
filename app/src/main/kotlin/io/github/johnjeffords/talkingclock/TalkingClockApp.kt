@@ -105,8 +105,11 @@ class TalkingClockApp : Application() {
     var currentSettings: SettingsRepository.Settings = SettingsRepository.Settings()
         private set
 
-    /** Process-lifetime scope for announce loops and settings plumbing. */
-    internal var appScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    /**
+     * Process-lifetime scope for controllers and settings plumbing. Keeping it
+     * on Main serializes tick-loop engine reads with UI/controller mutations.
+     */
+    internal var appScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     /** Completion handle for the ordered process-start initialization. */
     internal lateinit var initializationJob: Job

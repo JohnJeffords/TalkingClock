@@ -33,7 +33,7 @@ class AlarmReceiver : BroadcastReceiver() {
         // A receiver must return fast; goAsync() keeps the process alive
         // for the short lookup + start (well under the ~10 s budget).
         val pending = goAsync()
-        CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
+        app.appScope.launch {
             try {
                 val alarm = app.alarmRepository.alarms.first()
                     .find { it.id == alarmId && it.enabled }

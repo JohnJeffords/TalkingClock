@@ -169,4 +169,26 @@ class StopwatchControllerTest {
         assertEquals(opening + "Ten seconds", speaker.spoken)
         assertEquals(StopwatchEngine.Phase.Running, controller.state.value.snapshot.phase)
     }
+
+    @Test
+    fun `pause at a pending tick boundary cannot announce after cancellation`() = runTest {
+        val controller = buildController()
+        controller.start()
+        runCurrent()
+        advance(Duration.ofMillis(9_800))
+
+        // Reach the 10 s mark before dispatching the pending tick. Pause must
+        // publish the valid banked snapshot without letting that tick speak.
+        nowMs += 200
+        controller.pause()
+        advanceTimeBy(200)
+        runCurrent()
+
+        assertEquals(StopwatchEngine.Phase.Paused, controller.state.value.snapshot.phase)
+        assertEquals(Duration.ofSeconds(10), controller.state.value.snapshot.elapsed)
+        assertEquals(
+            listOf("One second", "Two seconds", "Three seconds", "Four seconds", "Five seconds"),
+            speaker.spoken,
+        )
+    }
 }
