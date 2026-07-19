@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.Clock
 import java.time.Duration
+import java.time.Instant
 import java.time.LocalDateTime
 
 /**
@@ -38,10 +39,9 @@ import java.time.LocalDateTime
  * under a virtual-time test with a fake speaker (SpeakingClockControllerTest).
  *
  * Timing approach: sleep in short slices (≤ [MAX_SLICE] at a time),
- * recomputing everything from the injected [clock] on each wake. The
- * per-slice recompute makes the loop self-correcting: an NTP adjustment or
- * timezone change is picked up within a minute without any broadcast
- * receivers, and drift never accumulates.
+ * recomputing from the injected [clock] on each wake so drift never
+ * accumulates. Android time/timezone broadcasts call [realign] immediately
+ * because an old-zone local boundary cannot be interpreted in the new zone.
  */
 class SpeakingClockController(
     private val clock: Clock,
@@ -95,6 +95,7 @@ class SpeakingClockController(
     var isQuietNow: () -> Boolean = { false }
 
     private var announceJob: Job? = null
+    private var autoOffInstant: Instant? = null
 
     /**
      * Arm the speaking clock at [interval] (replacing any current interval),
@@ -106,11 +107,14 @@ class SpeakingClockController(
     fun arm(interval: SpeakInterval, autoOff: Duration? = null) {
         if (interval !in SpeakInterval.PRESETS) lastCustomInterval = interval
 
-        val now = LocalDateTime.now(clock)
+        val nowInstant = clock.instant()
+        val now = LocalDateTime.ofInstant(nowInstant, clock.zone)
+        val newAutoOffInstant = nowInstant.plus(autoOff ?: defaultAutoOff)
+        autoOffInstant = newAutoOffInstant
         stateFlow.value = State(
             interval = interval,
             nextAt = nextAnnouncementTime(now, interval),
-            autoOffAt = now.plus(autoOff ?: defaultAutoOff),
+            autoOffAt = LocalDateTime.ofInstant(newAutoOffInstant, clock.zone),
         )
         ensureServiceRunning()
 
@@ -125,8 +129,22 @@ class SpeakingClockController(
     fun disarm() {
         announceJob?.cancel()
         announceJob = null
+        autoOffInstant = null
         announcer.stop(Speaker.PRIORITY_CLOCK)
         stateFlow.value = State()
+    }
+
+    /** Re-project deadlines and boundaries after Android's wall clock changes. */
+    fun realign() {
+        val st = stateFlow.value
+        val interval = st.interval ?: return
+        val now = LocalDateTime.now(clock)
+        stateFlow.value = st.copy(
+            nextAt = nextAnnouncementTime(now, interval),
+            autoOffAt = autoOffInstant?.let { LocalDateTime.ofInstant(it, clock.zone) },
+        )
+        announceJob?.cancel()
+        announceJob = scope.launch { announceLoop() }
     }
 
     /**
@@ -137,12 +155,12 @@ class SpeakingClockController(
         while (true) {
             val st = stateFlow.value
             val interval = st.interval ?: return
-            val now = LocalDateTime.now(clock)
+            val nowInstant = clock.instant()
+            val now = LocalDateTime.ofInstant(nowInstant, clock.zone)
 
             // Auto-off reached: shut down visibly (state clears, service
             // stops, notification disappears — a stop must never be silent).
-            val autoOffAt = st.autoOffAt
-            if (autoOffAt != null && !now.isBefore(autoOffAt)) {
+            if (autoOffInstant?.let { !nowInstant.isBefore(it) } == true) {
                 disarm()
                 return
             }

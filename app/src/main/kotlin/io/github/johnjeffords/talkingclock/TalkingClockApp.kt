@@ -1,7 +1,10 @@
 package io.github.johnjeffords.talkingclock
 
 import android.app.Application
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.SystemClock
+import androidx.core.content.ContextCompat
 import io.github.johnjeffords.talkingclock.alarm.AlarmRinger
 import io.github.johnjeffords.talkingclock.alarm.AlarmScheduler
 import io.github.johnjeffords.talkingclock.announce.SpeakingClockController
@@ -16,6 +19,7 @@ import io.github.johnjeffords.talkingclock.domain.announce.SpeakInterval
 import io.github.johnjeffords.talkingclock.domain.stopwatch.StopwatchEngine
 import io.github.johnjeffords.talkingclock.domain.timer.AnnouncementSchedule
 import io.github.johnjeffords.talkingclock.domain.timer.TimerEngine
+import io.github.johnjeffords.talkingclock.domain.time.SystemWallClock
 import io.github.johnjeffords.talkingclock.service.AnnouncerService
 import io.github.johnjeffords.talkingclock.speech.Announcer
 import io.github.johnjeffords.talkingclock.speech.Speaker
@@ -33,6 +37,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import java.time.Clock
 import java.time.Duration
 import java.time.LocalTime
 
@@ -105,6 +110,9 @@ class TalkingClockApp : Application() {
     var currentSettings: SettingsRepository.Settings = SettingsRepository.Settings()
         private set
 
+    /** Wall clock shared by display and speech; its system zone is dynamic. */
+    internal var wallClock: Clock = SystemWallClock
+
     /**
      * Process-lifetime scope for controllers and settings plumbing. Keeping it
      * on Main serializes tick-loop engine reads with UI/controller mutations.
@@ -125,7 +133,7 @@ class TalkingClockApp : Application() {
         announcer = SpeechAnnouncer(speaker) { activePackPlayer }
 
         speakingClockController = SpeakingClockController(
-            clock = java.time.Clock.systemDefaultZone(),
+            clock = wallClock,
             announcer = announcer,
             scope = appScope,
             ensureServiceRunning = { AnnouncerService.ensureRunning(this) },
@@ -181,6 +189,16 @@ class TalkingClockApp : Application() {
             },
         )
 
+        ContextCompat.registerReceiver(
+            this,
+            WallClockChangeReceiver(::handleWallClockChanged),
+            IntentFilter().apply {
+                addAction(Intent.ACTION_TIME_CHANGED)
+                addAction(Intent.ACTION_TIMEZONE_CHANGED)
+            },
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
+
         wireQuietHours()
         initializationJob = appScope.launch {
             // Settings (especially speech lead) must be applied before a
@@ -195,6 +213,11 @@ class TalkingClockApp : Application() {
         // (cheap, idempotent, and covers app-update process restarts that
         // BootReceiver doesn't).
         appScope.launch { alarmScheduler.rescheduleAll(alarmRepository.alarms.first()) }
+    }
+
+    /** Re-align all local wall-clock work after a time or zone change. */
+    private fun handleWallClockChanged() {
+        speakingClockController.realign()
     }
 
     /** Quiet-hours checks: clock/stopwatch silenced by the window; timers

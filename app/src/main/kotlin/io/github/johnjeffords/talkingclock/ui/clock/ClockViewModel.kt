@@ -126,7 +126,7 @@ class ClockViewModel(
             initializer {
                 val app = this[APPLICATION_KEY] as TalkingClockApp
                 ClockViewModel(
-                    clock = Clock.systemDefaultZone(),
+                    clock = app.wallClock,
                     locale = Locale.getDefault(),
                     speakingClock = app.speakingClockController,
                     settingsFlow = app.settingsRepository.settings,

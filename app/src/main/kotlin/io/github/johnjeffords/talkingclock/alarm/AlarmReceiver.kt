@@ -9,9 +9,6 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import io.github.johnjeffords.talkingclock.R
 import io.github.johnjeffords.talkingclock.TalkingClockApp
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -97,16 +94,18 @@ class AlarmReceiver : BroadcastReceiver() {
     }
 }
 
-/**
- * Re-books every enabled alarm after a reboot — AlarmManager schedules
- * don't survive one (RECEIVE_BOOT_COMPLETED; see D-020).
- */
+/** Re-books enabled alarms after reboot or a system wall-clock change. */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
+        if (intent.action != Intent.ACTION_BOOT_COMPLETED &&
+            intent.action != Intent.ACTION_TIME_CHANGED &&
+            intent.action != Intent.ACTION_TIMEZONE_CHANGED
+        ) {
+            return
+        }
         val app = context.applicationContext as TalkingClockApp
         val pending = goAsync()
-        CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
+        app.appScope.launch {
             try {
                 app.alarmScheduler.rescheduleAll(app.alarmRepository.alarms.first())
             } finally {
