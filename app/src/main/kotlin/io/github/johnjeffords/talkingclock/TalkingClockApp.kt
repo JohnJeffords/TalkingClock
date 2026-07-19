@@ -25,6 +25,7 @@ import io.github.johnjeffords.talkingclock.voicepack.VoicePackPlayer
 import io.github.johnjeffords.talkingclock.voicepack.VoicePackStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -105,7 +106,11 @@ class TalkingClockApp : Application() {
         private set
 
     /** Process-lifetime scope for announce loops and settings plumbing. */
-    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    internal var appScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    /** Completion handle for the ordered process-start initialization. */
+    internal lateinit var initializationJob: Job
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -174,9 +179,15 @@ class TalkingClockApp : Application() {
         )
 
         wireQuietHours()
-        wireSettingsIntoConsumers()
-        wireEnginePersistence()
-        restoreSavedState()
+        initializationJob = appScope.launch {
+            // Settings (especially speech lead) must be applied before a
+            // restored run latches them, and restore must finish before an
+            // initial Idle emission is allowed to clear the saved state.
+            applySettings(settingsRepository.settings.first())
+            restoreSavedState()
+            wireEnginePersistence()
+            wireSettingsIntoConsumers()
+        }
         // Re-sync AlarmManager with the stored alarms at every process start
         // (cheap, idempotent, and covers app-update process restarts that
         // BootReceiver doesn't).
@@ -206,33 +217,35 @@ class TalkingClockApp : Application() {
     /** One collector pushes each settings change to every consumer. */
     private fun wireSettingsIntoConsumers() {
         settingsRepository.settings
-            .onEach { settings ->
-                currentSettings = settings
-                speakingClockController.speakingStyle = settings.speakingStyle
-                speakingClockController.defaultAutoOff =
-                    Duration.ofMinutes(settings.autoOffMinutes.toLong())
-                speakingClockController.lastCustomInterval =
-                    settings.lastCustomIntervalSeconds
-                        ?.takeIf { it in SpeakInterval.MIN_SECONDS..SpeakInterval.MAX_SECONDS }
-                        ?.let(::SpeakInterval)
-                timerController.selectSchedule(
-                    AnnouncementSchedule.BUILT_INS.find { it.name == settings.timerScheduleName }
-                        ?: AnnouncementSchedule.GAME,
-                )
-                timerController.restoreLastDuration(
-                    Duration.ofSeconds(settings.lastTimerDurationSeconds),
-                )
-                stopwatchController.setSpeakElapsed(settings.stopwatchSpeakElapsed)
-                stopwatchController.setSpeakLaps(settings.stopwatchSpeakLaps)
-                // Same latency-compensation lead feeds both counting tools.
-                val speechLead = Duration.ofMillis(settings.speechLeadMillis.toLong())
-                timerController.speechLead = speechLead
-                stopwatchController.speechLead = speechLead
-                ttsSpeaker.setRate(settings.ttsRate)
-                ttsSpeaker.setPitch(settings.ttsPitch)
-                switchVoicePackIfNeeded(settings.voicePackId)
-            }
+            .onEach(::applySettings)
             .launchIn(appScope)
+    }
+
+    private suspend fun applySettings(settings: SettingsRepository.Settings) {
+        currentSettings = settings
+        speakingClockController.speakingStyle = settings.speakingStyle
+        speakingClockController.defaultAutoOff =
+            Duration.ofMinutes(settings.autoOffMinutes.toLong())
+        speakingClockController.lastCustomInterval =
+            settings.lastCustomIntervalSeconds
+                ?.takeIf { it in SpeakInterval.MIN_SECONDS..SpeakInterval.MAX_SECONDS }
+                ?.let(::SpeakInterval)
+        timerController.selectSchedule(
+            AnnouncementSchedule.BUILT_INS.find { it.name == settings.timerScheduleName }
+                ?: AnnouncementSchedule.GAME,
+        )
+        timerController.restoreLastDuration(
+            Duration.ofSeconds(settings.lastTimerDurationSeconds),
+        )
+        stopwatchController.setSpeakElapsed(settings.stopwatchSpeakElapsed)
+        stopwatchController.setSpeakLaps(settings.stopwatchSpeakLaps)
+        // Same latency-compensation lead feeds both counting tools.
+        val speechLead = Duration.ofMillis(settings.speechLeadMillis.toLong())
+        timerController.speechLead = speechLead
+        stopwatchController.speechLead = speechLead
+        ttsSpeaker.setRate(settings.ttsRate)
+        ttsSpeaker.setPitch(settings.ttsPitch)
+        switchVoicePackIfNeeded(settings.voicePackId)
     }
 
     /** Build/tear down the pack player when the voice-source setting changes. */
@@ -302,15 +315,13 @@ class TalkingClockApp : Application() {
     }
 
     /** Bring back interrupted runs (as paused — see the controllers' docs). */
-    private fun restoreSavedState() {
-        appScope.launch {
-            engineStateStore.loadTimer()?.let { saved ->
-                timerController.restorePaused(saved.duration, saved.remaining)
-            }
-            engineStateStore.loadStopwatch()?.let { saved ->
-                if (!saved.elapsed.isZero) {
-                    stopwatchController.restorePaused(saved.elapsed, saved.laps)
-                }
+    private suspend fun restoreSavedState() {
+        engineStateStore.loadTimer()?.let { saved ->
+            timerController.restorePaused(saved.duration, saved.remaining)
+        }
+        engineStateStore.loadStopwatch()?.let { saved ->
+            if (!saved.elapsed.isZero) {
+                stopwatchController.restorePaused(saved.elapsed, saved.laps)
             }
         }
     }
