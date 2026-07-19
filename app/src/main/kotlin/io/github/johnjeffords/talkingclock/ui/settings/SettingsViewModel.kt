@@ -121,6 +121,8 @@ class SettingsViewModel(
         write { repository.setStopwatchSpeakElapsed(speak) }
     fun setStopwatchSpeakLaps(speak: Boolean) =
         write { repository.setStopwatchSpeakLaps(speak) }
+    fun setNotificationPermissionAsked() =
+        write { repository.setNotificationPermissionAsked() }
 
     // --- Quiet hours ---
     fun setQuietHoursEnabled(enabled: Boolean) =

@@ -1,39 +1,29 @@
 package io.github.johnjeffords.talkingclock.ui.clock
 
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
 import android.provider.Settings
 import android.text.format.DateFormat
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.johnjeffords.talkingclock.TalkingClockApp
-import io.github.johnjeffords.talkingclock.domain.announce.SpeakInterval
 import io.github.johnjeffords.talkingclock.speech.Utterance
+import io.github.johnjeffords.talkingclock.ui.StartBackgroundFeature
 import io.github.johnjeffords.talkingclock.ui.VOICE_ENGINE_FDROID_URL
 import java.time.LocalTime
 
 /**
  * Connects the Clock [ClockViewModel] and the app's speech engine to the
- * [ClockScreen] UI, and owns the two purely-Android concerns the screen
- * can't: the POST_NOTIFICATIONS request flow (explainer sheet → system
- * dialog → arm) and the reduced-motion check.
+ * [ClockScreen] UI, reports background starts to the shared notification
+ * permission coordinator, and owns the reduced-motion check.
  */
 @Composable
-fun ClockRoute() {
+fun ClockRoute(startBackgroundFeature: StartBackgroundFeature) {
     val viewModel: ClockViewModel = viewModel(factory = ClockViewModel.Factory)
 
     val context = LocalContext.current
@@ -59,31 +49,6 @@ fun ClockRoute() {
         ) != 0f
     }
 
-    // --- POST_NOTIFICATIONS flow -------------------------------------------
-    // Arming can outlive the screen, so its status notification matters.
-    // First arm on Android 13+ without the permission: show the honest
-    // explainer sheet, then (only if the user opts in) the system dialog.
-    // EITHER answer still arms the clock — the permission gates visibility,
-    // never function.
-    var pendingInterval by remember { mutableStateOf<SpeakInterval?>(null) }
-    var explainerShown by rememberSaveable { mutableStateOf(false) }
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { _ ->
-        // Granted or denied — proceed identically (see above).
-        pendingInterval?.let(viewModel::selectInterval)
-        pendingInterval = null
-    }
-
-    fun needsNotificationAsk(): Boolean =
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            !explainerShown &&
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.POST_NOTIFICATIONS,
-            ) != PackageManager.PERMISSION_GRANTED
-
     ClockScreen(
         uiState = uiState,
         speakerState = speakerState,
@@ -103,10 +68,10 @@ fun ClockRoute() {
             )
         },
         onSelectInterval = { interval ->
-            if (interval != null && needsNotificationAsk()) {
-                pendingInterval = interval // opens the explainer sheet below
+            if (interval != null) {
+                startBackgroundFeature { viewModel.selectInterval(interval) }
             } else {
-                viewModel.selectInterval(interval)
+                viewModel.selectInterval(null)
             }
         },
         onInstallEngine = {
@@ -118,18 +83,4 @@ fun ClockRoute() {
             )
         },
     )
-
-    pendingInterval?.let {
-        NotificationExplainerSheet(
-            onAllow = {
-                explainerShown = true
-                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            },
-            onDeny = {
-                explainerShown = true
-                pendingInterval?.let(viewModel::selectInterval)
-                pendingInterval = null
-            },
-        )
-    }
 }

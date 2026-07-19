@@ -57,10 +57,11 @@
 
     <!-- Notification-permission explainer (shown once, before the request) -->
     <string name="notif_explainer_title">One notification, only while it\'s on</string>
-    <string name="notif_explainer_body">While the speaking clock or a timer is running, a notification shows what\'s on and lets you stop it from anywhere. That\'s the only notification this app ever shows.</string>
+    <string name="notif_explainer_body">While the speaking clock, a timer, or the stopwatch is running, a notification shows what\'s on and lets you stop it from anywhere. That\'s the only notification this app ever shows.</string>
     <string name="notif_explainer_honest">If you say no, everything still works — you just won\'t see it from outside the app.</string>
     <string name="notif_explainer_deny">Not now</string>
     <string name="notif_explainer_allow">Allow notifications</string>
+    <string name="notif_permission_denied_banner">Everything still works, but notification and lock-screen controls are hidden.</string>
 
     <!-- Timer screen -->
     <string name="timer_entry_units">hours : minutes : seconds</string>

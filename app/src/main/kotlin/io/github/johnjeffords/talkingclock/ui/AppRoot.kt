@@ -24,6 +24,7 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
@@ -97,7 +98,12 @@ fun TalkingClockRoot() {
 
     NavHost(navController = navController, startDestination = Routes.HOME) {
         composable(Routes.HOME) {
-            HomeShell(onOpenSettings = { navController.navigate(Routes.SETTINGS) })
+            HomeShell(
+                notificationPermissionAsked = settings.notificationPermissionAsked,
+                onNotificationPermissionAsked =
+                    settingsViewModel::setNotificationPermissionAsked,
+                onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+            )
         }
 
         composable(Routes.SETTINGS) {
@@ -235,7 +241,11 @@ fun TalkingClockRoot() {
 /** The tools shell: drawer + top bar + bottom tabs. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun HomeShell(onOpenSettings: () -> Unit) {
+private fun HomeShell(
+    notificationPermissionAsked: Boolean,
+    onNotificationPermissionAsked: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var selectedTab by rememberSaveable { mutableStateOf(HomeTab.Clock) }
@@ -252,23 +262,28 @@ private fun HomeShell(onOpenSettings: () -> Unit) {
         return
     }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            AppDrawer(
-                selectedTab = selectedTab,
-                onSelectTab = { tab ->
-                    selectedTab = tab
-                    scope.launch { drawerState.close() }
-                },
-                onOpenSettings = {
-                    scope.launch { drawerState.close() }
-                    onOpenSettings()
-                },
-            )
-        },
-    ) {
-        Scaffold(
+    BackgroundFeaturePermissionCoordinator(
+        alreadyAsked = notificationPermissionAsked,
+        onAsked = onNotificationPermissionAsked,
+    ) { startBackgroundFeature, snackbarHostState ->
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            drawerContent = {
+                AppDrawer(
+                    selectedTab = selectedTab,
+                    onSelectTab = { tab ->
+                        selectedTab = tab
+                        scope.launch { drawerState.close() }
+                    },
+                    onOpenSettings = {
+                        scope.launch { drawerState.close() }
+                        onOpenSettings()
+                    },
+                )
+            },
+        ) {
+            Scaffold(
+                snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 // No title text — the design's top bar is just the menu
                 // button and (on the Clock tab) the nightstand toggle.
@@ -309,13 +324,14 @@ private fun HomeShell(onOpenSettings: () -> Unit) {
         ) { innerPadding ->
             Box(Modifier.fillMaxSize().padding(innerPadding)) {
                 when (selectedTab) {
-                    HomeTab.Clock -> ClockRoute()
+                    HomeTab.Clock -> ClockRoute(startBackgroundFeature)
                     HomeTab.Alarm -> AlarmRoute()
-                    HomeTab.Timer -> TimerRoute()
-                    HomeTab.Stopwatch -> StopwatchRoute()
+                    HomeTab.Timer -> TimerRoute(startBackgroundFeature)
+                    HomeTab.Stopwatch -> StopwatchRoute(startBackgroundFeature)
                 }
             }
         }
+    }
     }
 }
 

@@ -10,11 +10,12 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.johnjeffords.talkingclock.domain.stopwatch.StopwatchEngine
+import io.github.johnjeffords.talkingclock.ui.StartBackgroundFeature
 import java.time.Duration
 
 /** Wires [StopwatchViewModel] to [StopwatchScreen]. Thin by design. */
 @Composable
-fun StopwatchRoute() {
+fun StopwatchRoute(startBackgroundFeature: StartBackgroundFeature) {
     val viewModel: StopwatchViewModel = viewModel(factory = StopwatchViewModel.Factory)
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -41,7 +42,7 @@ fun StopwatchRoute() {
 
     StopwatchScreen(
         uiState = uiState.copy(elapsed = displayElapsed),
-        onStartOrResume = viewModel::startOrResume,
+        onStartOrResume = { startBackgroundFeature(viewModel::startOrResume) },
         onPause = viewModel::pause,
         onLap = viewModel::lap,
         onReset = viewModel::reset,

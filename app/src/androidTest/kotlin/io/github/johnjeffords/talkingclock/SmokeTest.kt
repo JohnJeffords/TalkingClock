@@ -1,11 +1,20 @@
 package io.github.johnjeffords.talkingclock
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.core.content.ContextCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -25,6 +34,30 @@ class SmokeTest {
 
     @get:Rule
     val composeRule = createAndroidComposeRule<MainActivity>()
+
+    private val app: TalkingClockApp
+        get() = composeRule.activity.application as TalkingClockApp
+
+    @Before
+    fun resetBackgroundFeatureState() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            assumeTrue(
+                ContextCompat.checkSelfPermission(
+                    composeRule.activity,
+                    Manifest.permission.POST_NOTIFICATIONS,
+                ) != PackageManager.PERMISSION_GRANTED,
+            )
+        }
+        runBlocking { app.settingsRepository.setNotificationPermissionAsked(false) }
+        composeRule.runOnUiThread {
+            app.timerController.reset()
+            app.stopwatchController.reset()
+            app.speakingClockController.disarm()
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            !app.currentSettings.notificationPermissionAsked
+        }
+    }
 
     @Test
     fun launches_ticks_speaks_and_arms() {
@@ -58,5 +91,49 @@ class SmokeTest {
             composeRule.onAllNodesWithText("Announcing every 5 minutes")
                 .fetchSemanticsNodes().isNotEmpty()
         }
+    }
+
+    @Test
+    fun timer_first_start_explains_denial_and_keeps_running() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        composeRule.onNodeWithText("Timer").performClick()
+        composeRule.onNodeWithText("Start").assertIsEnabled().performClick()
+
+        denyNotificationExplanation()
+
+        composeRule.onNodeWithText("Pause").assertExists()
+        composeRule.onNodeWithText(deniedBanner()).assertExists()
+        assertPermissionExplanationPersisted()
+    }
+
+    @Test
+    fun stopwatch_first_start_explains_denial_and_keeps_running() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        composeRule.onNodeWithText("Stopwatch").performClick()
+        composeRule.onNodeWithText("Start").assertIsEnabled().performClick()
+
+        denyNotificationExplanation()
+
+        composeRule.onNodeWithText("Pause").assertExists()
+        composeRule.onNodeWithText(deniedBanner()).assertExists()
+        assertPermissionExplanationPersisted()
+    }
+
+    private fun denyNotificationExplanation() {
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithText("Not now").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithText("Not now").performClick()
+        composeRule.waitForIdle()
+    }
+
+    private fun deniedBanner(): String =
+        composeRule.activity.getString(R.string.notif_permission_denied_banner)
+
+    private fun assertPermissionExplanationPersisted() {
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            app.currentSettings.notificationPermissionAsked
+        }
+        assertTrue(app.currentSettings.notificationPermissionAsked)
     }
 }
