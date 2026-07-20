@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.core.content.ContextCompat
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.johnjeffords.talkingclock.domain.stopwatch.StopwatchEngine
 import io.github.johnjeffords.talkingclock.domain.timer.TimerEngine
@@ -20,7 +21,11 @@ import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.RuleChain
+import org.junit.rules.TestRule
 import org.junit.runner.RunWith
+import org.junit.runner.Description
+import org.junit.runners.model.Statement
 
 /**
  * On-device/emulator smoke test: the app launches, the clock is ticking,
@@ -35,8 +40,12 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class SmokeTest {
 
-    @get:Rule
     val composeRule = createAndroidComposeRule<MainActivity>()
+
+    @get:Rule
+    val rules: TestRule = RuleChain
+        .outerRule(NotificationStateResetRule())
+        .around(composeRule)
 
     private val app: TalkingClockApp
         get() = composeRule.activity.application as TalkingClockApp
@@ -51,7 +60,6 @@ class SmokeTest {
                 ) != PackageManager.PERMISSION_GRANTED,
             )
         }
-        runBlocking { app.settingsRepository.setNotificationPermissionAsked(false) }
         composeRule.runOnUiThread {
             app.timerController.reset()
             app.stopwatchController.reset()
@@ -151,5 +159,19 @@ class SmokeTest {
             app.currentSettings.notificationPermissionAsked
         }
         assertTrue(app.currentSettings.notificationPermissionAsked)
+    }
+
+    /** DataStore must be reset before the Activity takes its initial snapshot. */
+    private class NotificationStateResetRule : TestRule {
+        override fun apply(base: Statement, description: Description): Statement =
+            object : Statement() {
+                override fun evaluate() {
+                    val app = ApplicationProvider.getApplicationContext<TalkingClockApp>()
+                    runBlocking {
+                        app.settingsRepository.setNotificationPermissionAsked(false)
+                    }
+                    base.evaluate()
+                }
+            }
     }
 }
