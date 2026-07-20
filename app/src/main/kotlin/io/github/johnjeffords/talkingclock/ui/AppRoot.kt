@@ -123,6 +123,7 @@ fun TalkingClockRoot() {
                     onSetStopwatchSpeakElapsed = settingsViewModel::setStopwatchSpeakElapsed,
                     onSetStopwatchSpeakLaps = settingsViewModel::setStopwatchSpeakLaps,
                     onSetSpeechLead = settingsViewModel::setSpeechLeadMillis,
+                    onSetHapticFeedback = settingsViewModel::setHapticFeedback,
                     onOpenVoice = { navController.navigate(Routes.VOICE) },
                     onOpenSpeakingStyle = { navController.navigate(Routes.SPEAKING_STYLE) },
                     onOpenQuietHours = { navController.navigate(Routes.QUIET_HOURS) },
@@ -158,21 +159,22 @@ fun TalkingClockRoot() {
                     importError = importError,
                     onSetRate = settingsViewModel::setTtsRate,
                     onSetPitch = settingsViewModel::setTtsPitch,
-                    onSelectPack = settingsViewModel::selectVoicePack,
-                    onImportPack = {
+                    onSelectPack = rememberHapticAction(settingsViewModel::selectVoicePack),
+                    onImportPack = rememberHapticAction {
                         packPicker.launch(
                             arrayOf("application/zip", "application/octet-stream", "*/*"),
                         )
                     },
-                    onDeletePack = settingsViewModel::deleteVoicePack,
-                    onDismissImportError = settingsViewModel::dismissImportError,
-                    onTest = { settingsViewModel.previewSpeech() },
-                    onInstallEngine = {
+                    onDeletePack = rememberHapticAction(settingsViewModel::deleteVoicePack),
+                    onDismissImportError =
+                        rememberHapticAction(settingsViewModel::dismissImportError),
+                    onTest = rememberHapticAction { settingsViewModel.previewSpeech() },
+                    onInstallEngine = rememberHapticAction {
                         context.startActivity(
                             Intent(Intent.ACTION_VIEW, VOICE_ENGINE_FDROID_URL.toUri()),
                         )
                     },
-                    onOpenSystemSpeechSettings = {
+                    onOpenSystemSpeechSettings = rememberHapticAction {
                         // The system Text-to-speech screen. Its action isn't a
                         // public constant, so fall back to the top-level Settings
                         // app on the rare device that doesn't expose it directly.
@@ -194,8 +196,8 @@ fun TalkingClockRoot() {
             ) { padding ->
                 SpeakingStyleScreen(
                     selected = settings.speakingStyle,
-                    onSelect = settingsViewModel::setSpeakingStyle,
-                    onPreview = settingsViewModel::previewSpeech,
+                    onSelect = rememberHapticAction(settingsViewModel::setSpeakingStyle),
+                    onPreview = rememberHapticAction(settingsViewModel::previewSpeech),
                     modifier = padding,
                 )
             }
@@ -212,8 +214,8 @@ fun TalkingClockRoot() {
                     untilMinutes = settings.quietUntilMinutes,
                     allowTimers = settings.quietAllowTimers,
                     onSetEnabled = settingsViewModel::setQuietHoursEnabled,
-                    onSetFrom = settingsViewModel::setQuietFrom,
-                    onSetUntil = settingsViewModel::setQuietUntil,
+                    onSetFrom = rememberHapticAction(settingsViewModel::setQuietFrom),
+                    onSetUntil = rememberHapticAction(settingsViewModel::setQuietUntil),
                     onSetAllowTimers = settingsViewModel::setQuietAllowTimers,
                     modifier = padding,
                 )
@@ -226,10 +228,10 @@ fun TalkingClockRoot() {
                 onBack = { navController.popBackStack() },
             ) { padding ->
                 AboutScreen(
-                    onOpenSource = {
+                    onOpenSource = rememberHapticAction {
                         context.startActivity(Intent(Intent.ACTION_VIEW, REPO_URL.toUri()))
                     },
-                    onReportIssue = {
+                    onReportIssue = rememberHapticAction {
                         context.startActivity(Intent(Intent.ACTION_VIEW, ISSUES_URL.toUri()))
                     },
                     modifier = padding,
@@ -272,11 +274,11 @@ private fun HomeShell(
             drawerContent = {
                 AppDrawer(
                     selectedTab = selectedTab,
-                    onSelectTab = { tab ->
+                    onSelectTab = rememberHapticAction { tab ->
                         selectedTab = tab
                         scope.launch { drawerState.close() }
                     },
-                    onOpenSettings = {
+                    onOpenSettings = rememberHapticAction {
                         scope.launch { drawerState.close() }
                         onOpenSettings()
                     },
@@ -291,7 +293,11 @@ private fun HomeShell(
                 TopAppBar(
                     title = {},
                     navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                        IconButton(
+                            onClick = rememberHapticAction {
+                                scope.launch { drawerState.open() }
+                            },
+                        ) {
                             Icon(
                                 imageVector = Icons.Filled.Menu,
                                 contentDescription = stringResource(R.string.clock_open_menu),
@@ -300,7 +306,7 @@ private fun HomeShell(
                     },
                     actions = {
                         if (selectedTab == HomeTab.Clock) {
-                            IconButton(onClick = { nightstand = true }) {
+                            IconButton(onClick = rememberHapticAction { nightstand = true }) {
                                 Icon(
                                     imageVector = Icons.Outlined.Bedtime,
                                     contentDescription = "Nightstand mode",
@@ -315,7 +321,7 @@ private fun HomeShell(
                     HomeTab.entries.forEach { tab ->
                         NavigationBarItem(
                             selected = tab == selectedTab,
-                            onClick = { selectedTab = tab },
+                            onClick = rememberHapticAction { selectedTab = tab },
                             icon = { Icon(tab.icon, contentDescription = null) },
                             label = { Text(stringResource(tab.labelRes)) },
                             modifier = Modifier.testTag("bottom_tab_${tab.name}"),
@@ -346,12 +352,13 @@ private fun SettingsScaffold(
     onBack: () -> Unit,
     content: @Composable (Modifier) -> Unit,
 ) {
+    val hapticBack = rememberHapticAction(onBack)
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(title) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = hapticBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.settings_back),

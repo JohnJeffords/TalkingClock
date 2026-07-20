@@ -12,6 +12,7 @@ import io.github.johnjeffords.talkingclock.voicepack.VoicePackPlayer.PlayResult
  */
 class SpeechAnnouncer(
     private val speaker: Speaker,
+    private val onAnnounce: (Int) -> Unit = {},
     private val activePack: () -> VoicePackPlayer?,
 ) : Announcer {
 
@@ -23,11 +24,15 @@ class SpeechAnnouncer(
     internal fun deliver(utterance: Utterance, priority: Int, result: PlayResult) {
         when (result) {
             PlayResult.Played -> {
+                onAnnounce(priority)
                 // The pack is speaking; make sure TTS isn't ALSO talking over it
                 // from an earlier lower-priority utterance.
                 speaker.stop()
             }
-            PlayResult.Unsupported -> speaker.speak(utterance.toText(), priority)
+            PlayResult.Unsupported -> {
+                onAnnounce(priority)
+                speaker.speak(utterance.toText(), priority)
+            }
             PlayResult.Dropped -> Unit
         }
     }

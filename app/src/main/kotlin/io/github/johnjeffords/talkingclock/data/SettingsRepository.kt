@@ -60,6 +60,8 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val stopwatchSpeakLaps: Boolean = false,
         // Background feature notification explanation (shown once, app-wide)
         val notificationPermissionAsked: Boolean = false,
+        // Behavior
+        val hapticFeedback: Boolean = true,
         // Quiet hours
         val quietHoursEnabled: Boolean = false,
         /** Minutes since midnight, local time. Defaults 22:00 → 07:00. */
@@ -88,6 +90,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             stopwatchSpeakElapsed = prefs[KEY_SW_SPEAK_ELAPSED] ?: true,
             stopwatchSpeakLaps = prefs[KEY_SW_SPEAK_LAPS] ?: false,
             notificationPermissionAsked = prefs[KEY_NOTIFICATION_PERMISSION_ASKED] ?: false,
+            hapticFeedback = prefs[KEY_HAPTIC_FEEDBACK] ?: true,
             quietHoursEnabled = prefs[KEY_QUIET_ENABLED] ?: false,
             quietFromMinutes = prefs[KEY_QUIET_FROM] ?: (22 * 60),
             quietUntilMinutes = prefs[KEY_QUIET_UNTIL] ?: (7 * 60),
@@ -158,6 +161,9 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     suspend fun setNotificationPermissionAsked(asked: Boolean = true) =
         dataStore.edit { it[KEY_NOTIFICATION_PERMISSION_ASKED] = asked }
 
+    suspend fun setHapticFeedback(enabled: Boolean) =
+        dataStore.edit { it[KEY_HAPTIC_FEEDBACK] = enabled }
+
     suspend fun setQuietHoursEnabled(enabled: Boolean) =
         dataStore.edit { it[KEY_QUIET_ENABLED] = enabled }
 
@@ -188,6 +194,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         private val KEY_SW_SPEAK_LAPS = booleanPreferencesKey("sw_speak_laps")
         private val KEY_NOTIFICATION_PERMISSION_ASKED =
             booleanPreferencesKey("notification_permission_asked")
+        private val KEY_HAPTIC_FEEDBACK = booleanPreferencesKey("haptic_feedback")
         private val KEY_QUIET_ENABLED = booleanPreferencesKey("quiet_enabled")
         private val KEY_QUIET_FROM = intPreferencesKey("quiet_from_min")
         private val KEY_QUIET_UNTIL = intPreferencesKey("quiet_until_min")

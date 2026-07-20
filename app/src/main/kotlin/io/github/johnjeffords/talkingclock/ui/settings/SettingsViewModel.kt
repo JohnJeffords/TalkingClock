@@ -123,6 +123,7 @@ class SettingsViewModel(
         write { repository.setStopwatchSpeakLaps(speak) }
     fun setNotificationPermissionAsked() =
         write { repository.setNotificationPermissionAsked() }
+    fun setHapticFeedback(enabled: Boolean) = write { repository.setHapticFeedback(enabled) }
 
     // --- Quiet hours ---
     fun setQuietHoursEnabled(enabled: Boolean) =

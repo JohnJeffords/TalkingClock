@@ -3,7 +3,11 @@ package io.github.johnjeffords.talkingclock
 import android.app.Application
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.Build
 import android.os.SystemClock
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import androidx.core.content.ContextCompat
 import io.github.johnjeffords.talkingclock.alarm.AlarmRinger
 import io.github.johnjeffords.talkingclock.alarm.AlarmScheduler
@@ -130,7 +134,7 @@ class TalkingClockApp : Application() {
         ttsSpeaker = TtsSpeaker.create(this)
         speaker = ttsSpeaker
         voicePackStore = VoicePackStore(this)
-        announcer = SpeechAnnouncer(speaker) { activePackPlayer }
+        announcer = SpeechAnnouncer(speaker, ::buzzForAnnouncement) { activePackPlayer }
 
         speakingClockController = SpeakingClockController(
             clock = wallClock,
@@ -218,6 +222,22 @@ class TalkingClockApp : Application() {
     /** Re-align all local wall-clock work after a time or zone change. */
     private fun handleWallClockChanged() {
         speakingClockController.realign()
+    }
+
+    /** Short confirmation for spoken cues; alarms own their vibration separately. */
+    private fun buzzForAnnouncement(priority: Int) {
+        if (!currentSettings.hapticFeedback || priority == Speaker.PRIORITY_ALARM) return
+        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            (getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            getSystemService(VIBRATOR_SERVICE) as Vibrator
+        }
+        if (vibrator.hasVibrator()) {
+            vibrator.vibrate(
+                VibrationEffect.createOneShot(20, VibrationEffect.DEFAULT_AMPLITUDE),
+            )
+        }
     }
 
     /** Quiet-hours checks: clock/stopwatch silenced by the window; timers

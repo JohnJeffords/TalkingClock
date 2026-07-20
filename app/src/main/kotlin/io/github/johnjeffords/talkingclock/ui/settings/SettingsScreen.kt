@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VolumeUp
+import androidx.compose.material.icons.outlined.Vibration
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -40,6 +41,7 @@ import io.github.johnjeffords.talkingclock.R
 import io.github.johnjeffords.talkingclock.data.SettingsRepository
 import io.github.johnjeffords.talkingclock.domain.speech.SpeakingStyle
 import io.github.johnjeffords.talkingclock.domain.timer.AnnouncementSchedule
+import io.github.johnjeffords.talkingclock.ui.rememberHapticAction
 import io.github.johnjeffords.talkingclock.ui.theme.ThemeChoice
 
 /**
@@ -48,8 +50,7 @@ import io.github.johnjeffords.talkingclock.ui.theme.ThemeChoice
  * navigate to a sub-screen (Voice, Speaking style, Quiet hours, About).
  *
  * Not present yet, on purpose: seven-segment clock style (needs the DSEG
- * font — parked), hourly chime, and haptics (needs VIBRATE — decided with
- * the alarm permissions, D-020). docs/DESIGN.md tracks these.
+ * font — parked) and hourly chime. docs/DESIGN.md tracks these.
  */
 @Composable
 fun SettingsScreen(
@@ -63,6 +64,7 @@ fun SettingsScreen(
     onSetStopwatchSpeakElapsed: (Boolean) -> Unit,
     onSetStopwatchSpeakLaps: (Boolean) -> Unit,
     onSetSpeechLead: (Int) -> Unit,
+    onSetHapticFeedback: (Boolean) -> Unit,
     onOpenVoice: () -> Unit,
     onOpenSpeakingStyle: () -> Unit,
     onOpenQuietHours: () -> Unit,
@@ -155,6 +157,13 @@ fun SettingsScreen(
         )
 
         SettingsSectionHeader(stringResource(R.string.settings_section_behavior))
+        SettingsSwitchRow(
+            icon = Icons.Outlined.Vibration,
+            title = stringResource(R.string.settings_haptic_feedback),
+            subtitle = stringResource(R.string.settings_haptic_feedback_subtitle),
+            checked = settings.hapticFeedback,
+            onCheckedChange = onSetHapticFeedback,
+        )
         SettingsNavRow(
             icon = Icons.Outlined.Bedtime,
             title = stringResource(R.string.settings_quiet_hours),
@@ -283,8 +292,10 @@ fun ChoiceDialog(
     onSelect: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val hapticSelect = rememberHapticAction(onSelect)
+    val hapticDismiss = rememberHapticAction(onDismiss)
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = hapticDismiss,
         title = { Text(title) },
         text = {
             Column {
@@ -293,12 +304,12 @@ fun ChoiceDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onSelect(index) }
+                            .clickable { hapticSelect(index) }
                             .padding(vertical = 4.dp),
                     ) {
                         RadioButton(
                             selected = index == selectedIndex,
-                            onClick = { onSelect(index) },
+                            onClick = { hapticSelect(index) },
                         )
                         Text(option, style = MaterialTheme.typography.bodyLarge)
                     }
@@ -306,7 +317,7 @@ fun ChoiceDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = hapticDismiss) {
                 Text(stringResource(R.string.dialog_cancel))
             }
         },

@@ -7,10 +7,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.johnjeffords.talkingclock.data.SettingsRepository
+import io.github.johnjeffords.talkingclock.ui.ProvideHapticFeedback
 import io.github.johnjeffords.talkingclock.ui.TalkingClockRoot
 import io.github.johnjeffords.talkingclock.ui.theme.TalkingClockTheme
-import io.github.johnjeffords.talkingclock.ui.theme.ThemeChoice
-import kotlinx.coroutines.flow.map
 
 /**
  * The app's single Activity. It just hosts the Compose UI — all screens live
@@ -27,15 +27,16 @@ class MainActivity : ComponentActivity() {
 
         val app = application as TalkingClockApp
         setContent {
-            // The theme setting drives the whole tree; changing it in
-            // Settings restyles every screen instantly. The mapped flow is
-            // built inside remember (NOT directly in composition) so it isn't
-            // recreated every recomposition — the ComposeFlowOperatorInvoked
-            // lint rule, and the right thing regardless.
-            val themeFlow = remember(app) { app.settingsRepository.settings.map { it.theme } }
-            val theme by themeFlow.collectAsStateWithLifecycle(initialValue = ThemeChoice.System)
-            TalkingClockTheme(theme) {
-                TalkingClockRoot()
+            // Theme and haptic settings drive the whole UI tree. Keep the
+            // DataStore flow stable across recompositions.
+            val settingsFlow = remember(app) { app.settingsRepository.settings }
+            val settings by settingsFlow.collectAsStateWithLifecycle(
+                initialValue = SettingsRepository.Settings(),
+            )
+            TalkingClockTheme(settings.theme) {
+                ProvideHapticFeedback(settings.hapticFeedback) {
+                    TalkingClockRoot()
+                }
             }
         }
     }

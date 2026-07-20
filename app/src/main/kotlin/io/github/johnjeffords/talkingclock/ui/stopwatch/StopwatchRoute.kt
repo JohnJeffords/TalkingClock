@@ -11,6 +11,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.johnjeffords.talkingclock.domain.stopwatch.StopwatchEngine
 import io.github.johnjeffords.talkingclock.ui.StartBackgroundFeature
+import io.github.johnjeffords.talkingclock.ui.rememberHapticAction
 import java.time.Duration
 
 /** Wires [StopwatchViewModel] to [StopwatchScreen]. Thin by design. */
@@ -42,9 +43,11 @@ fun StopwatchRoute(startBackgroundFeature: StartBackgroundFeature) {
 
     StopwatchScreen(
         uiState = uiState.copy(elapsed = displayElapsed),
-        onStartOrResume = { startBackgroundFeature(viewModel::startOrResume) },
-        onPause = viewModel::pause,
-        onLap = viewModel::lap,
-        onReset = viewModel::reset,
+        onStartOrResume = rememberHapticAction {
+            startBackgroundFeature(viewModel::startOrResume)
+        },
+        onPause = rememberHapticAction(viewModel::pause),
+        onLap = rememberHapticAction(viewModel::lap),
+        onReset = rememberHapticAction(viewModel::reset),
     )
 }

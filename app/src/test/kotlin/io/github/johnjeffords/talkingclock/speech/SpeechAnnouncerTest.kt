@@ -42,6 +42,34 @@ class SpeechAnnouncerTest {
     }
 
     @Test
+    fun `an announcement reports its priority for optional haptic feedback`() {
+        var reportedPriority: Int? = null
+        val reportingAnnouncer = SpeechAnnouncer(
+            speaker = speaker,
+            onAnnounce = { reportedPriority = it },
+            activePack = { null },
+        )
+
+        reportingAnnouncer.announce(utterance, Speaker.PRIORITY_TIMER)
+
+        assertEquals(Speaker.PRIORITY_TIMER, reportedPriority)
+    }
+
+    @Test
+    fun `a priority-dropped pack utterance does not trigger haptic feedback`() {
+        var reportedPriority: Int? = null
+        val reportingAnnouncer = SpeechAnnouncer(
+            speaker = speaker,
+            onAnnounce = { reportedPriority = it },
+            activePack = { null },
+        )
+
+        reportingAnnouncer.deliver(utterance, Speaker.PRIORITY_CLOCK, PlayResult.Dropped)
+
+        assertEquals(null, reportedPriority)
+    }
+
+    @Test
     fun `disarming clock through shared announcer does not stop timer speech`() = runTest {
         val ownershipSpeaker = OwnershipSpeaker()
         val sharedAnnouncer = SpeechAnnouncer(ownershipSpeaker) { null }

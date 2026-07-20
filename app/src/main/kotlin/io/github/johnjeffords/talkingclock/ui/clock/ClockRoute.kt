@@ -15,6 +15,7 @@ import io.github.johnjeffords.talkingclock.TalkingClockApp
 import io.github.johnjeffords.talkingclock.speech.Utterance
 import io.github.johnjeffords.talkingclock.ui.StartBackgroundFeature
 import io.github.johnjeffords.talkingclock.ui.VOICE_ENGINE_FDROID_URL
+import io.github.johnjeffords.talkingclock.ui.rememberHapticAction
 import java.time.LocalTime
 
 /**
@@ -54,7 +55,7 @@ fun ClockRoute(startBackgroundFeature: StartBackgroundFeature) {
         speakerState = speakerState,
         lastCustomInterval = viewModel.lastCustomInterval,
         animationsEnabled = animationsEnabled,
-        onSpeakNow = {
+        onSpeakNow = rememberHapticAction {
             // Speak the time AT THE MOMENT OF THE TAP (not the displayed
             // tick, which can be up to a second old), in the user's chosen
             // speaking style — through the announcer, so an active voice
@@ -67,14 +68,14 @@ fun ClockRoute(startBackgroundFeature: StartBackgroundFeature) {
                 ),
             )
         },
-        onSelectInterval = { interval ->
+        onSelectInterval = rememberHapticAction { interval ->
             if (interval != null) {
                 startBackgroundFeature { viewModel.selectInterval(interval) }
             } else {
                 viewModel.selectInterval(null)
             }
         },
-        onInstallEngine = {
+        onInstallEngine = rememberHapticAction {
             // Open the recommended engine's F-Droid page in the browser. The
             // intent is handled by the browser app — this app itself still
             // makes no network requests and has no INTERNET permission.
