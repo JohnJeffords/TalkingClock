@@ -5,9 +5,8 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -98,7 +97,7 @@ class SmokeTest {
     @Test
     fun timer_first_start_explains_denial_and_keeps_running() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-        composeRule.onNode(hasText("Timer") and hasClickAction()).performClick()
+        composeRule.onNodeWithTag("bottom_tab_Timer").performClick()
         composeRule.onNodeWithText("Start").assertIsEnabled().performClick()
 
         denyNotificationExplanation()
@@ -111,7 +110,7 @@ class SmokeTest {
     @Test
     fun stopwatch_first_start_explains_denial_and_keeps_running() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-        composeRule.onNode(hasText("Stopwatch") and hasClickAction()).performClick()
+        composeRule.onNodeWithTag("bottom_tab_Stopwatch").performClick()
         composeRule.onNodeWithText("Start").assertIsEnabled().performClick()
 
         denyNotificationExplanation()
