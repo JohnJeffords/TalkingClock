@@ -24,6 +24,7 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
@@ -36,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -45,6 +47,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import io.github.johnjeffords.talkingclock.R
 import io.github.johnjeffords.talkingclock.TalkingClockApp
+import io.github.johnjeffords.talkingclock.data.SettingsRepository
 import io.github.johnjeffords.talkingclock.ui.alarm.AlarmRoute
 import io.github.johnjeffords.talkingclock.ui.clock.ClockRoute
 import io.github.johnjeffords.talkingclock.ui.clock.ClockViewModel
@@ -97,7 +100,13 @@ fun TalkingClockRoot() {
 
     NavHost(navController = navController, startDestination = Routes.HOME) {
         composable(Routes.HOME) {
-            HomeShell(onOpenSettings = { navController.navigate(Routes.SETTINGS) })
+            HomeShell(
+                clockStyle = settings.clockStyle,
+                notificationPermissionAsked = settings.notificationPermissionAsked,
+                onNotificationPermissionAsked =
+                    settingsViewModel::setNotificationPermissionAsked,
+                onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+            )
         }
 
         composable(Routes.SETTINGS) {
@@ -109,6 +118,7 @@ fun TalkingClockRoot() {
                     settings = settings,
                     onSetTheme = settingsViewModel::setTheme,
                     onSetTimeFormat = settingsViewModel::setTimeFormat,
+                    onSetClockStyle = settingsViewModel::setClockStyle,
                     onSetShowSeconds = settingsViewModel::setShowSeconds,
                     onSetShowDate = settingsViewModel::setShowDate,
                     onSetAutoOff = settingsViewModel::setAutoOffMinutes,
@@ -116,6 +126,7 @@ fun TalkingClockRoot() {
                     onSetStopwatchSpeakElapsed = settingsViewModel::setStopwatchSpeakElapsed,
                     onSetStopwatchSpeakLaps = settingsViewModel::setStopwatchSpeakLaps,
                     onSetSpeechLead = settingsViewModel::setSpeechLeadMillis,
+                    onSetHapticFeedback = settingsViewModel::setHapticFeedback,
                     onOpenVoice = { navController.navigate(Routes.VOICE) },
                     onOpenSpeakingStyle = { navController.navigate(Routes.SPEAKING_STYLE) },
                     onOpenQuietHours = { navController.navigate(Routes.QUIET_HOURS) },
@@ -151,21 +162,22 @@ fun TalkingClockRoot() {
                     importError = importError,
                     onSetRate = settingsViewModel::setTtsRate,
                     onSetPitch = settingsViewModel::setTtsPitch,
-                    onSelectPack = settingsViewModel::selectVoicePack,
-                    onImportPack = {
+                    onSelectPack = rememberHapticAction(settingsViewModel::selectVoicePack),
+                    onImportPack = rememberHapticAction {
                         packPicker.launch(
                             arrayOf("application/zip", "application/octet-stream", "*/*"),
                         )
                     },
-                    onDeletePack = settingsViewModel::deleteVoicePack,
-                    onDismissImportError = settingsViewModel::dismissImportError,
-                    onTest = { settingsViewModel.previewSpeech() },
-                    onInstallEngine = {
+                    onDeletePack = rememberHapticAction(settingsViewModel::deleteVoicePack),
+                    onDismissImportError =
+                        rememberHapticAction(settingsViewModel::dismissImportError),
+                    onTest = rememberHapticAction { settingsViewModel.previewSpeech() },
+                    onInstallEngine = rememberHapticAction {
                         context.startActivity(
                             Intent(Intent.ACTION_VIEW, VOICE_ENGINE_FDROID_URL.toUri()),
                         )
                     },
-                    onOpenSystemSpeechSettings = {
+                    onOpenSystemSpeechSettings = rememberHapticAction {
                         // The system Text-to-speech screen. Its action isn't a
                         // public constant, so fall back to the top-level Settings
                         // app on the rare device that doesn't expose it directly.
@@ -187,8 +199,8 @@ fun TalkingClockRoot() {
             ) { padding ->
                 SpeakingStyleScreen(
                     selected = settings.speakingStyle,
-                    onSelect = settingsViewModel::setSpeakingStyle,
-                    onPreview = settingsViewModel::previewSpeech,
+                    onSelect = rememberHapticAction(settingsViewModel::setSpeakingStyle),
+                    onPreview = rememberHapticAction(settingsViewModel::previewSpeech),
                     modifier = padding,
                 )
             }
@@ -205,8 +217,8 @@ fun TalkingClockRoot() {
                     untilMinutes = settings.quietUntilMinutes,
                     allowTimers = settings.quietAllowTimers,
                     onSetEnabled = settingsViewModel::setQuietHoursEnabled,
-                    onSetFrom = settingsViewModel::setQuietFrom,
-                    onSetUntil = settingsViewModel::setQuietUntil,
+                    onSetFrom = rememberHapticAction(settingsViewModel::setQuietFrom),
+                    onSetUntil = rememberHapticAction(settingsViewModel::setQuietUntil),
                     onSetAllowTimers = settingsViewModel::setQuietAllowTimers,
                     modifier = padding,
                 )
@@ -219,10 +231,10 @@ fun TalkingClockRoot() {
                 onBack = { navController.popBackStack() },
             ) { padding ->
                 AboutScreen(
-                    onOpenSource = {
+                    onOpenSource = rememberHapticAction {
                         context.startActivity(Intent(Intent.ACTION_VIEW, REPO_URL.toUri()))
                     },
-                    onReportIssue = {
+                    onReportIssue = rememberHapticAction {
                         context.startActivity(Intent(Intent.ACTION_VIEW, ISSUES_URL.toUri()))
                     },
                     modifier = padding,
@@ -235,7 +247,12 @@ fun TalkingClockRoot() {
 /** The tools shell: drawer + top bar + bottom tabs. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun HomeShell(onOpenSettings: () -> Unit) {
+private fun HomeShell(
+    clockStyle: SettingsRepository.ClockStyle,
+    notificationPermissionAsked: Boolean,
+    onNotificationPermissionAsked: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var selectedTab by rememberSaveable { mutableStateOf(HomeTab.Clock) }
@@ -247,35 +264,52 @@ private fun HomeShell(onOpenSettings: () -> Unit) {
         val uiState by clockViewModel.uiState.collectAsStateWithLifecycle()
         NightstandScreen(
             readout = uiState.readout,
+            clockStyle = clockStyle,
             onExit = { nightstand = false },
         )
         return
     }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            AppDrawer(
-                selectedTab = selectedTab,
-                onSelectTab = { tab ->
-                    selectedTab = tab
-                    scope.launch { drawerState.close() }
+    BackgroundFeaturePermissionCoordinator(
+        alreadyAsked = notificationPermissionAsked,
+        onAsked = onNotificationPermissionAsked,
+    ) { startBackgroundFeature, snackbarHostState ->
+        ModalNavigationDrawer(
+            modifier = Modifier.testTag(
+                if (notificationPermissionAsked) {
+                    "notification_permission_asked"
+                } else {
+                    "notification_permission_fresh"
                 },
-                onOpenSettings = {
-                    scope.launch { drawerState.close() }
-                    onOpenSettings()
-                },
-            )
-        },
-    ) {
-        Scaffold(
+            ),
+            drawerState = drawerState,
+            drawerContent = {
+                AppDrawer(
+                    selectedTab = selectedTab,
+                    onSelectTab = rememberHapticAction { tab ->
+                        selectedTab = tab
+                        scope.launch { drawerState.close() }
+                    },
+                    onOpenSettings = rememberHapticAction {
+                        scope.launch { drawerState.close() }
+                        onOpenSettings()
+                    },
+                )
+            },
+        ) {
+            Scaffold(
+                snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 // No title text — the design's top bar is just the menu
                 // button and (on the Clock tab) the nightstand toggle.
                 TopAppBar(
                     title = {},
                     navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                        IconButton(
+                            onClick = rememberHapticAction {
+                                scope.launch { drawerState.open() }
+                            },
+                        ) {
                             Icon(
                                 imageVector = Icons.Filled.Menu,
                                 contentDescription = stringResource(R.string.clock_open_menu),
@@ -284,7 +318,7 @@ private fun HomeShell(onOpenSettings: () -> Unit) {
                     },
                     actions = {
                         if (selectedTab == HomeTab.Clock) {
-                            IconButton(onClick = { nightstand = true }) {
+                            IconButton(onClick = rememberHapticAction { nightstand = true }) {
                                 Icon(
                                     imageVector = Icons.Outlined.Bedtime,
                                     contentDescription = "Nightstand mode",
@@ -299,9 +333,10 @@ private fun HomeShell(onOpenSettings: () -> Unit) {
                     HomeTab.entries.forEach { tab ->
                         NavigationBarItem(
                             selected = tab == selectedTab,
-                            onClick = { selectedTab = tab },
+                            onClick = rememberHapticAction { selectedTab = tab },
                             icon = { Icon(tab.icon, contentDescription = null) },
                             label = { Text(stringResource(tab.labelRes)) },
+                            modifier = Modifier.testTag("bottom_tab_${tab.name}"),
                         )
                     }
                 }
@@ -309,13 +344,14 @@ private fun HomeShell(onOpenSettings: () -> Unit) {
         ) { innerPadding ->
             Box(Modifier.fillMaxSize().padding(innerPadding)) {
                 when (selectedTab) {
-                    HomeTab.Clock -> ClockRoute()
+                    HomeTab.Clock -> ClockRoute(startBackgroundFeature)
                     HomeTab.Alarm -> AlarmRoute()
-                    HomeTab.Timer -> TimerRoute()
-                    HomeTab.Stopwatch -> StopwatchRoute()
+                    HomeTab.Timer -> TimerRoute(startBackgroundFeature)
+                    HomeTab.Stopwatch -> StopwatchRoute(startBackgroundFeature)
                 }
             }
         }
+    }
     }
 }
 
@@ -328,12 +364,13 @@ private fun SettingsScaffold(
     onBack: () -> Unit,
     content: @Composable (Modifier) -> Unit,
 ) {
+    val hapticBack = rememberHapticAction(onBack)
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(title) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = hapticBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.settings_back),

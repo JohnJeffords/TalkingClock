@@ -97,6 +97,7 @@ class TtsSpeaker(
     /** Priority of the utterance currently playing (see [Speaker.speak]). */
     private var speakingPriority = Int.MIN_VALUE
 
+    @Synchronized
     override fun speak(text: String, priority: Int) {
         // Drop (never queue, never crash) unless the engine is ready.
         if (stateFlow.value != SpeakerState.Ready) return
@@ -104,19 +105,26 @@ class TtsSpeaker(
         // The collision rule: a lower-priority line never interrupts a
         // higher-priority one — it's dropped, not delayed (a late
         // announcement is a wrong announcement).
-        if (tts.isSpeaking && priority < speakingPriority) return
+        if (priority < speakingPriority) return
 
         speakingPriority = priority
         requestFocus()
         tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, UTTERANCE_ID)
     }
 
+    @Synchronized
     override fun stop() {
         tts.stop()
         speakingPriority = Int.MIN_VALUE
         abandonFocus()
     }
 
+    @Synchronized
+    override fun stop(priority: Int) {
+        if (speakingPriority == priority) stop()
+    }
+
+    @Synchronized
     override fun shutdown() {
         tts.stop()
         tts.shutdown()
@@ -124,6 +132,7 @@ class TtsSpeaker(
     }
 
     /** An utterance finished (or died): release focus, open the gate. */
+    @Synchronized
     private fun onUtteranceEnded() {
         speakingPriority = Int.MIN_VALUE
         abandonFocus()

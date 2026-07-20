@@ -10,6 +10,8 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.johnjeffords.talkingclock.domain.timer.TimerEngine
+import io.github.johnjeffords.talkingclock.ui.StartBackgroundFeature
+import io.github.johnjeffords.talkingclock.ui.rememberHapticAction
 
 /**
  * Wires [TimerViewModel] to [TimerScreen]. Thin by design — the screen is a
@@ -17,7 +19,7 @@ import io.github.johnjeffords.talkingclock.domain.timer.TimerEngine
  * keypad logic, the controller owns the timer itself.
  */
 @Composable
-fun TimerRoute() {
+fun TimerRoute(startBackgroundFeature: StartBackgroundFeature) {
     val viewModel: TimerViewModel = viewModel(factory = TimerViewModel.Factory)
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -51,13 +53,13 @@ fun TimerRoute() {
             overtime = live.overtime,
             progress = live.progress,
         ),
-        onDigit = viewModel::typeDigit,
-        onDoubleZero = viewModel::typeDoubleZero,
-        onDelete = viewModel::deleteDigit,
-        onStart = viewModel::start,
-        onPause = viewModel::pause,
-        onResume = viewModel::resume,
-        onReset = viewModel::reset,
-        onSelectSchedule = viewModel::selectSchedule,
+        onDigit = rememberHapticAction(viewModel::typeDigit),
+        onDoubleZero = rememberHapticAction(viewModel::typeDoubleZero),
+        onDelete = rememberHapticAction(viewModel::deleteDigit),
+        onStart = rememberHapticAction { startBackgroundFeature(viewModel::start) },
+        onPause = rememberHapticAction(viewModel::pause),
+        onResume = rememberHapticAction(viewModel::resume),
+        onReset = rememberHapticAction(viewModel::reset),
+        onSelectSchedule = rememberHapticAction(viewModel::selectSchedule),
     )
 }

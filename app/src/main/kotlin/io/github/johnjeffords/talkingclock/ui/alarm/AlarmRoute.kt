@@ -9,6 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.johnjeffords.talkingclock.domain.alarm.Alarm
+import io.github.johnjeffords.talkingclock.ui.rememberHapticAction
 
 /**
  * The Alarm tab: the list, with the editor layered over it while an alarm
@@ -33,7 +34,7 @@ fun AlarmRoute() {
     if (editing != null) {
         AlarmEditScreen(
             initial = editing,
-            onSave = { alarm ->
+            onSave = rememberHapticAction { alarm ->
                 viewModel.save(alarm)
                 editingId = null
                 newDraft = false
@@ -41,7 +42,7 @@ fun AlarmRoute() {
             onDelete = if (newDraft) {
                 null // an unsaved draft has nothing to delete
             } else {
-                {
+                rememberHapticAction {
                     viewModel.delete(editing.id)
                     editingId = null
                 }
@@ -50,9 +51,9 @@ fun AlarmRoute() {
     } else {
         AlarmListScreen(
             uiState = uiState,
-            onAdd = { newDraft = true },
-            onEdit = { editingId = it.id },
-            onSetEnabled = viewModel::setEnabled,
+            onAdd = rememberHapticAction { newDraft = true },
+            onEdit = rememberHapticAction<Alarm> { editingId = it.id },
+            onSetEnabled = rememberHapticAction(viewModel::setEnabled),
         )
     }
 }

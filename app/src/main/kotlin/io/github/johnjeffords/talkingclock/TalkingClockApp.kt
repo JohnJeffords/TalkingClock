@@ -1,7 +1,14 @@
 package io.github.johnjeffords.talkingclock
 
 import android.app.Application
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import android.os.SystemClock
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import androidx.core.content.ContextCompat
 import io.github.johnjeffords.talkingclock.alarm.AlarmRinger
 import io.github.johnjeffords.talkingclock.alarm.AlarmScheduler
 import io.github.johnjeffords.talkingclock.announce.SpeakingClockController
@@ -16,6 +23,7 @@ import io.github.johnjeffords.talkingclock.domain.announce.SpeakInterval
 import io.github.johnjeffords.talkingclock.domain.stopwatch.StopwatchEngine
 import io.github.johnjeffords.talkingclock.domain.timer.AnnouncementSchedule
 import io.github.johnjeffords.talkingclock.domain.timer.TimerEngine
+import io.github.johnjeffords.talkingclock.domain.time.SystemWallClock
 import io.github.johnjeffords.talkingclock.service.AnnouncerService
 import io.github.johnjeffords.talkingclock.speech.Announcer
 import io.github.johnjeffords.talkingclock.speech.Speaker
@@ -25,6 +33,7 @@ import io.github.johnjeffords.talkingclock.voicepack.VoicePackPlayer
 import io.github.johnjeffords.talkingclock.voicepack.VoicePackStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -32,6 +41,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import java.time.Clock
 import java.time.Duration
 import java.time.LocalTime
 
@@ -104,8 +114,18 @@ class TalkingClockApp : Application() {
     var currentSettings: SettingsRepository.Settings = SettingsRepository.Settings()
         private set
 
-    /** Process-lifetime scope for announce loops and settings plumbing. */
-    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    /** Wall clock shared by display and speech; its system zone is dynamic. */
+    internal var wallClock: Clock = SystemWallClock
+
+    /**
+     * Process-lifetime scope for controllers and settings plumbing. Keeping it
+     * on Main serializes tick-loop engine reads with UI/controller mutations.
+     */
+    internal var appScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    /** Completion handle for the ordered process-start initialization. */
+    internal lateinit var initializationJob: Job
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -114,10 +134,10 @@ class TalkingClockApp : Application() {
         ttsSpeaker = TtsSpeaker.create(this)
         speaker = ttsSpeaker
         voicePackStore = VoicePackStore(this)
-        announcer = SpeechAnnouncer(speaker) { activePackPlayer }
+        announcer = SpeechAnnouncer(speaker, ::buzzForAnnouncement) { activePackPlayer }
 
         speakingClockController = SpeakingClockController(
-            clock = java.time.Clock.systemDefaultZone(),
+            clock = wallClock,
             announcer = announcer,
             scope = appScope,
             ensureServiceRunning = { AnnouncerService.ensureRunning(this) },
@@ -161,7 +181,7 @@ class TalkingClockApp : Application() {
                 }
             },
             onArmSpeakingClock = { alarm ->
-                // The signature feature: the moment the alarm rings, the
+                // The signature feature: when the alarm is dismissed, the
                 // speaking clock starts and runs while the user gets ready
                 // (design frame 24's amber card). Auto-off ends it.
                 alarm.handoffIntervalSeconds?.let { seconds ->
@@ -171,20 +191,53 @@ class TalkingClockApp : Application() {
                     )
                 }
             },
-            onQuietSpeakingClock = {
-                // Snooze silences the handoff clock until the next ring.
-                speakingClockController.disarm()
+        )
+
+        ContextCompat.registerReceiver(
+            this,
+            WallClockChangeReceiver(::handleWallClockChanged),
+            IntentFilter().apply {
+                addAction(Intent.ACTION_TIME_CHANGED)
+                addAction(Intent.ACTION_TIMEZONE_CHANGED)
             },
+            ContextCompat.RECEIVER_NOT_EXPORTED,
         )
 
         wireQuietHours()
-        wireSettingsIntoConsumers()
-        wireEnginePersistence()
-        restoreSavedState()
+        initializationJob = appScope.launch {
+            // Settings (especially speech lead) must be applied before a
+            // restored run latches them, and restore must finish before an
+            // initial Idle emission is allowed to clear the saved state.
+            applySettings(settingsRepository.settings.first())
+            restoreSavedState()
+            wireEnginePersistence()
+            wireSettingsIntoConsumers()
+        }
         // Re-sync AlarmManager with the stored alarms at every process start
         // (cheap, idempotent, and covers app-update process restarts that
         // BootReceiver doesn't).
         appScope.launch { alarmScheduler.rescheduleAll(alarmRepository.alarms.first()) }
+    }
+
+    /** Re-align all local wall-clock work after a time or zone change. */
+    private fun handleWallClockChanged() {
+        speakingClockController.realign()
+    }
+
+    /** Short confirmation for spoken cues; alarms own their vibration separately. */
+    private fun buzzForAnnouncement(priority: Int) {
+        if (!currentSettings.hapticFeedback || priority == Speaker.PRIORITY_ALARM) return
+        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            (getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            getSystemService(VIBRATOR_SERVICE) as Vibrator
+        }
+        if (vibrator.hasVibrator()) {
+            vibrator.vibrate(
+                VibrationEffect.createOneShot(20, VibrationEffect.DEFAULT_AMPLITUDE),
+            )
+        }
     }
 
     /** Quiet-hours checks: clock/stopwatch silenced by the window; timers
@@ -210,33 +263,35 @@ class TalkingClockApp : Application() {
     /** One collector pushes each settings change to every consumer. */
     private fun wireSettingsIntoConsumers() {
         settingsRepository.settings
-            .onEach { settings ->
-                currentSettings = settings
-                speakingClockController.speakingStyle = settings.speakingStyle
-                speakingClockController.defaultAutoOff =
-                    Duration.ofMinutes(settings.autoOffMinutes.toLong())
-                speakingClockController.lastCustomInterval =
-                    settings.lastCustomIntervalSeconds
-                        ?.takeIf { it in SpeakInterval.MIN_SECONDS..SpeakInterval.MAX_SECONDS }
-                        ?.let(::SpeakInterval)
-                timerController.selectSchedule(
-                    AnnouncementSchedule.BUILT_INS.find { it.name == settings.timerScheduleName }
-                        ?: AnnouncementSchedule.GAME,
-                )
-                timerController.restoreLastDuration(
-                    Duration.ofSeconds(settings.lastTimerDurationSeconds),
-                )
-                stopwatchController.setSpeakElapsed(settings.stopwatchSpeakElapsed)
-                stopwatchController.setSpeakLaps(settings.stopwatchSpeakLaps)
-                // Same latency-compensation lead feeds both counting tools.
-                val speechLead = Duration.ofMillis(settings.speechLeadMillis.toLong())
-                timerController.speechLead = speechLead
-                stopwatchController.speechLead = speechLead
-                ttsSpeaker.setRate(settings.ttsRate)
-                ttsSpeaker.setPitch(settings.ttsPitch)
-                switchVoicePackIfNeeded(settings.voicePackId)
-            }
+            .onEach(::applySettings)
             .launchIn(appScope)
+    }
+
+    private suspend fun applySettings(settings: SettingsRepository.Settings) {
+        currentSettings = settings
+        speakingClockController.speakingStyle = settings.speakingStyle
+        speakingClockController.defaultAutoOff =
+            Duration.ofMinutes(settings.autoOffMinutes.toLong())
+        speakingClockController.lastCustomInterval =
+            settings.lastCustomIntervalSeconds
+                ?.takeIf { it in SpeakInterval.MIN_SECONDS..SpeakInterval.MAX_SECONDS }
+                ?.let(::SpeakInterval)
+        timerController.selectSchedule(
+            AnnouncementSchedule.BUILT_INS.find { it.name == settings.timerScheduleName }
+                ?: AnnouncementSchedule.GAME,
+        )
+        timerController.restoreLastDuration(
+            Duration.ofSeconds(settings.lastTimerDurationSeconds),
+        )
+        stopwatchController.setSpeakElapsed(settings.stopwatchSpeakElapsed)
+        stopwatchController.setSpeakLaps(settings.stopwatchSpeakLaps)
+        // Same latency-compensation lead feeds both counting tools.
+        val speechLead = Duration.ofMillis(settings.speechLeadMillis.toLong())
+        timerController.speechLead = speechLead
+        stopwatchController.speechLead = speechLead
+        ttsSpeaker.setRate(settings.ttsRate)
+        ttsSpeaker.setPitch(settings.ttsPitch)
+        switchVoicePackIfNeeded(settings.voicePackId)
     }
 
     /** Build/tear down the pack player when the voice-source setting changes. */
@@ -306,15 +361,13 @@ class TalkingClockApp : Application() {
     }
 
     /** Bring back interrupted runs (as paused — see the controllers' docs). */
-    private fun restoreSavedState() {
-        appScope.launch {
-            engineStateStore.loadTimer()?.let { saved ->
-                timerController.restorePaused(saved.duration, saved.remaining)
-            }
-            engineStateStore.loadStopwatch()?.let { saved ->
-                if (!saved.elapsed.isZero) {
-                    stopwatchController.restorePaused(saved.elapsed, saved.laps)
-                }
+    private suspend fun restoreSavedState() {
+        engineStateStore.loadTimer()?.let { saved ->
+            timerController.restorePaused(saved.duration, saved.remaining)
+        }
+        engineStateStore.loadStopwatch()?.let { saved ->
+            if (!saved.elapsed.isZero) {
+                stopwatchController.restorePaused(saved.elapsed, saved.laps)
             }
         }
     }

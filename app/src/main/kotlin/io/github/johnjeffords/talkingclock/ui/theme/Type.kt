@@ -2,10 +2,12 @@ package io.github.johnjeffords.talkingclock.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import io.github.johnjeffords.talkingclock.R
 
 /**
  * Typography.
@@ -17,8 +19,8 @@ import androidx.compose.ui.unit.sp
  * must use a MONOSPACED face so digits occupy equal width and the layout
  * doesn't twitch as numbers change (a hard rule from the design handoff).
  * We use [FontFamily.Monospace], which maps to the system's built-in
- * monospace font: it gives the tabular behavior we need with zero bundled
- * font files, keeping the APK small (the platform already ships the font).
+ * monospace font. The optional main-clock style uses the small bundled
+ * seven-segment subset below; other numeric tools keep the system face.
  */
 
 // The base Material 3 type scale — inherits the system font.
@@ -26,6 +28,11 @@ val TalkingClockTypography = Typography()
 
 /** Font family for all numeric time displays. See the note above. */
 val NumericFontFamily: FontFamily = FontFamily.Monospace
+
+/** OFL-licensed digits-and-colon font used only when the clock style requests it. */
+val SevenSegmentFontFamily: FontFamily = FontFamily(
+    Font(R.font.talking_clock_seven_segment),
+)
 
 /**
  * The huge clock readout on the home screen. Hours:minutes at 84sp; the

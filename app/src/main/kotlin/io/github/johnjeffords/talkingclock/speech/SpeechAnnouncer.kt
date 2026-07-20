@@ -1,6 +1,7 @@
 package io.github.johnjeffords.talkingclock.speech
 
 import io.github.johnjeffords.talkingclock.voicepack.VoicePackPlayer
+import io.github.johnjeffords.talkingclock.voicepack.VoicePackPlayer.PlayResult
 
 /**
  * The production [Announcer]: routes each utterance to the active voice
@@ -11,22 +12,38 @@ import io.github.johnjeffords.talkingclock.voicepack.VoicePackPlayer
  */
 class SpeechAnnouncer(
     private val speaker: Speaker,
+    private val onAnnounce: (Int) -> Unit = {},
     private val activePack: () -> VoicePackPlayer?,
 ) : Announcer {
 
     override fun announce(utterance: Utterance, priority: Int) {
-        val pack = activePack()
-        if (pack != null && pack.tryPlay(utterance, priority)) {
-            // The pack is speaking; make sure TTS isn't ALSO talking over it
-            // from an earlier lower-priority utterance.
-            speaker.stop()
-            return
+        val result = activePack()?.tryPlay(utterance, priority) ?: PlayResult.Unsupported
+        deliver(utterance, priority, result)
+    }
+
+    internal fun deliver(utterance: Utterance, priority: Int, result: PlayResult) {
+        when (result) {
+            PlayResult.Played -> {
+                onAnnounce(priority)
+                // The pack is speaking; make sure TTS isn't ALSO talking over it
+                // from an earlier lower-priority utterance.
+                speaker.stop()
+            }
+            PlayResult.Unsupported -> {
+                onAnnounce(priority)
+                speaker.speak(utterance.toText(), priority)
+            }
+            PlayResult.Dropped -> Unit
         }
-        speaker.speak(utterance.toText(), priority)
     }
 
     override fun stop() {
         activePack()?.stop()
         speaker.stop()
+    }
+
+    override fun stop(priority: Int) {
+        activePack()?.stop(priority)
+        speaker.stop(priority)
     }
 }

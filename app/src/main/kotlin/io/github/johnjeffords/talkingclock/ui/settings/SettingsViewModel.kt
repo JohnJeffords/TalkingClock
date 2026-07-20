@@ -60,6 +60,8 @@ class SettingsViewModel(
     fun setTheme(theme: ThemeChoice) = write { repository.setTheme(theme) }
     fun setTimeFormat(format: SettingsRepository.TimeFormat) =
         write { repository.setTimeFormat(format) }
+    fun setClockStyle(style: SettingsRepository.ClockStyle) =
+        write { repository.setClockStyle(style) }
     fun setShowSeconds(show: Boolean) = write { repository.setShowSeconds(show) }
     fun setShowDate(show: Boolean) = write { repository.setShowDate(show) }
 
@@ -121,6 +123,9 @@ class SettingsViewModel(
         write { repository.setStopwatchSpeakElapsed(speak) }
     fun setStopwatchSpeakLaps(speak: Boolean) =
         write { repository.setStopwatchSpeakLaps(speak) }
+    fun setNotificationPermissionAsked() =
+        write { repository.setNotificationPermissionAsked() }
+    fun setHapticFeedback(enabled: Boolean) = write { repository.setHapticFeedback(enabled) }
 
     // --- Quiet hours ---
     fun setQuietHoursEnabled(enabled: Boolean) =

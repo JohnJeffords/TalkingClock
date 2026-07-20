@@ -30,11 +30,15 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     /** How the clock's displayed hours follow (or override) the device. */
     enum class TimeFormat { System, TwelveHour, TwentyFourHour }
 
+    /** Typeface used by the main clock and nightstand readouts. */
+    enum class ClockStyle { Default, SevenSegment }
+
     /** One immutable snapshot of every setting. */
     data class Settings(
         // Display
         val theme: ThemeChoice = ThemeChoice.System,
         val timeFormat: TimeFormat = TimeFormat.System,
+        val clockStyle: ClockStyle = ClockStyle.Default,
         val showSeconds: Boolean = true,
         val showDate: Boolean = true,
         // Voice
@@ -58,6 +62,10 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         // Stopwatch
         val stopwatchSpeakElapsed: Boolean = true, // speaks the milestones by default
         val stopwatchSpeakLaps: Boolean = false,
+        // Background feature notification explanation (shown once, app-wide)
+        val notificationPermissionAsked: Boolean = false,
+        // Behavior
+        val hapticFeedback: Boolean = true,
         // Quiet hours
         val quietHoursEnabled: Boolean = false,
         /** Minutes since midnight, local time. Defaults 22:00 → 07:00. */
@@ -71,6 +79,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         Settings(
             theme = prefs[KEY_THEME]?.let(::themeOrDefault) ?: ThemeChoice.System,
             timeFormat = prefs[KEY_TIME_FORMAT]?.let(::formatOrDefault) ?: TimeFormat.System,
+            clockStyle = prefs[KEY_CLOCK_STYLE]?.let(::clockStyleOrDefault) ?: ClockStyle.Default,
             showSeconds = prefs[KEY_SHOW_SECONDS] ?: true,
             showDate = prefs[KEY_SHOW_DATE] ?: true,
             speakingStyle = prefs[KEY_SPEAKING_STYLE]?.let(::styleOrDefault)
@@ -85,6 +94,8 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             lastTimerDurationSeconds = prefs[KEY_LAST_TIMER_DURATION] ?: (15 * 60L),
             stopwatchSpeakElapsed = prefs[KEY_SW_SPEAK_ELAPSED] ?: true,
             stopwatchSpeakLaps = prefs[KEY_SW_SPEAK_LAPS] ?: false,
+            notificationPermissionAsked = prefs[KEY_NOTIFICATION_PERMISSION_ASKED] ?: false,
+            hapticFeedback = prefs[KEY_HAPTIC_FEEDBACK] ?: true,
             quietHoursEnabled = prefs[KEY_QUIET_ENABLED] ?: false,
             quietFromMinutes = prefs[KEY_QUIET_FROM] ?: (22 * 60),
             quietUntilMinutes = prefs[KEY_QUIET_UNTIL] ?: (7 * 60),
@@ -100,6 +111,9 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     private fun formatOrDefault(name: String) =
         TimeFormat.entries.find { it.name == name } ?: TimeFormat.System
 
+    private fun clockStyleOrDefault(name: String) =
+        ClockStyle.entries.find { it.name == name } ?: ClockStyle.Default
+
     private fun styleOrDefault(name: String) =
         SpeakingStyle.entries.find { it.name == name } ?: SpeakingStyle.Conversational
 
@@ -110,6 +124,9 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
 
     suspend fun setTimeFormat(format: TimeFormat) =
         dataStore.edit { it[KEY_TIME_FORMAT] = format.name }
+
+    suspend fun setClockStyle(style: ClockStyle) =
+        dataStore.edit { it[KEY_CLOCK_STYLE] = style.name }
 
     suspend fun setShowSeconds(show: Boolean) =
         dataStore.edit { it[KEY_SHOW_SECONDS] = show }
@@ -152,6 +169,12 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     suspend fun setStopwatchSpeakLaps(speak: Boolean) =
         dataStore.edit { it[KEY_SW_SPEAK_LAPS] = speak }
 
+    suspend fun setNotificationPermissionAsked(asked: Boolean = true) =
+        dataStore.edit { it[KEY_NOTIFICATION_PERMISSION_ASKED] = asked }
+
+    suspend fun setHapticFeedback(enabled: Boolean) =
+        dataStore.edit { it[KEY_HAPTIC_FEEDBACK] = enabled }
+
     suspend fun setQuietHoursEnabled(enabled: Boolean) =
         dataStore.edit { it[KEY_QUIET_ENABLED] = enabled }
 
@@ -167,6 +190,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     companion object {
         private val KEY_THEME = stringPreferencesKey("theme")
         private val KEY_TIME_FORMAT = stringPreferencesKey("time_format")
+        private val KEY_CLOCK_STYLE = stringPreferencesKey("clock_style")
         private val KEY_SHOW_SECONDS = booleanPreferencesKey("show_seconds")
         private val KEY_SHOW_DATE = booleanPreferencesKey("show_date")
         private val KEY_SPEAKING_STYLE = stringPreferencesKey("speaking_style")
@@ -180,6 +204,9 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         private val KEY_LAST_TIMER_DURATION = longPreferencesKey("last_timer_duration_s")
         private val KEY_SW_SPEAK_ELAPSED = booleanPreferencesKey("sw_speak_elapsed")
         private val KEY_SW_SPEAK_LAPS = booleanPreferencesKey("sw_speak_laps")
+        private val KEY_NOTIFICATION_PERMISSION_ASKED =
+            booleanPreferencesKey("notification_permission_asked")
+        private val KEY_HAPTIC_FEEDBACK = booleanPreferencesKey("haptic_feedback")
         private val KEY_QUIET_ENABLED = booleanPreferencesKey("quiet_enabled")
         private val KEY_QUIET_FROM = intPreferencesKey("quiet_from_min")
         private val KEY_QUIET_UNTIL = intPreferencesKey("quiet_until_min")
