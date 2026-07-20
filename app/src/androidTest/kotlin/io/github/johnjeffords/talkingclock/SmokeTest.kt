@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -69,9 +70,12 @@ class SmokeTest {
             !app.currentSettings.notificationPermissionAsked
         }
         // The application collector and the root SettingsViewModel collect
-        // the same DataStore independently. Let the composed tree observe
-        // the reset before starting a feature.
-        composeRule.waitForIdle()
+        // the same DataStore independently. Wait for the value used by the
+        // permission coordinator, not merely the application's snapshot.
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithTag("notification_permission_fresh")
+                .fetchSemanticsNodes().isNotEmpty()
+        }
     }
 
     @Test

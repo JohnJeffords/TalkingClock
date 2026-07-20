@@ -275,6 +275,13 @@ private fun HomeShell(
         onAsked = onNotificationPermissionAsked,
     ) { startBackgroundFeature, snackbarHostState ->
         ModalNavigationDrawer(
+            modifier = Modifier.testTag(
+                if (notificationPermissionAsked) {
+                    "notification_permission_asked"
+                } else {
+                    "notification_permission_fresh"
+                },
+            ),
             drawerState = drawerState,
             drawerContent = {
                 AppDrawer(
