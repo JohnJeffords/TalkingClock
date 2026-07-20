@@ -50,6 +50,7 @@ class SettingsRepositoryTest {
         val s = repo.settings.first()
         assertEquals(ThemeChoice.System, s.theme)
         assertEquals(SettingsRepository.TimeFormat.System, s.timeFormat)
+        assertEquals(SettingsRepository.ClockStyle.Default, s.clockStyle)
         assertEquals(true, s.showSeconds)
         assertEquals(SpeakingStyle.Conversational, s.speakingStyle)
         assertEquals(1000, s.speechLeadMillis)
@@ -71,6 +72,7 @@ class SettingsRepositoryTest {
 
         repo.setTheme(ThemeChoice.Amoled)
         repo.setTimeFormat(SettingsRepository.TimeFormat.TwentyFourHour)
+        repo.setClockStyle(SettingsRepository.ClockStyle.SevenSegment)
         repo.setShowSeconds(false)
         repo.setSpeakingStyle(SpeakingStyle.Formal)
         repo.setTtsRate(1.4f)
@@ -90,6 +92,7 @@ class SettingsRepositoryTest {
         val s = repo.settings.first()
         assertEquals(ThemeChoice.Amoled, s.theme)
         assertEquals(SettingsRepository.TimeFormat.TwentyFourHour, s.timeFormat)
+        assertEquals(SettingsRepository.ClockStyle.SevenSegment, s.clockStyle)
         assertEquals(false, s.showSeconds)
         assertEquals(SpeakingStyle.Formal, s.speakingStyle)
         assertEquals(1.4f, s.ttsRate, 0.001f)

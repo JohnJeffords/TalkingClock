@@ -14,6 +14,7 @@ import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.FontDownload
 import androidx.compose.material.icons.outlined.HourglassEmpty
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.PowerSettingsNew
@@ -49,14 +50,14 @@ import io.github.johnjeffords.talkingclock.ui.theme.ThemeChoice
  * sections. Rows either toggle directly, open a small choice dialog, or
  * navigate to a sub-screen (Voice, Speaking style, Quiet hours, About).
  *
- * Not present yet, on purpose: seven-segment clock style (needs the DSEG
- * font — parked) and hourly chime. docs/DESIGN.md tracks these.
+ * Not present yet, on purpose: hourly chime. docs/DESIGN.md tracks it.
  */
 @Composable
 fun SettingsScreen(
     settings: SettingsRepository.Settings,
     onSetTheme: (ThemeChoice) -> Unit,
     onSetTimeFormat: (SettingsRepository.TimeFormat) -> Unit,
+    onSetClockStyle: (SettingsRepository.ClockStyle) -> Unit,
     onSetShowSeconds: (Boolean) -> Unit,
     onSetShowDate: (Boolean) -> Unit,
     onSetAutoOff: (Int) -> Unit,
@@ -85,6 +86,12 @@ fun SettingsScreen(
             title = stringResource(R.string.settings_time_format),
             value = settings.timeFormat.label(),
             onClick = { openDialog = SettingsDialog.TimeFormat },
+        )
+        SettingsNavRow(
+            icon = Icons.Outlined.FontDownload,
+            title = stringResource(R.string.settings_clock_style),
+            value = settings.clockStyle.label(),
+            onClick = { openDialog = SettingsDialog.ClockStyle },
         )
         SettingsSwitchRow(
             icon = Icons.Outlined.Visibility,
@@ -207,6 +214,16 @@ fun SettingsScreen(
             },
             onDismiss = { openDialog = null },
         )
+        SettingsDialog.ClockStyle -> ChoiceDialog(
+            title = stringResource(R.string.settings_clock_style),
+            options = SettingsRepository.ClockStyle.entries.map { it.label() },
+            selectedIndex = SettingsRepository.ClockStyle.entries.indexOf(settings.clockStyle),
+            onSelect = {
+                onSetClockStyle(SettingsRepository.ClockStyle.entries[it])
+                openDialog = null
+            },
+            onDismiss = { openDialog = null },
+        )
         SettingsDialog.AutoOff -> ChoiceDialog(
             title = stringResource(R.string.settings_auto_off),
             options = AUTO_OFF_CHOICES.map {
@@ -239,7 +256,14 @@ fun SettingsScreen(
     }
 }
 
-private enum class SettingsDialog { Theme, TimeFormat, AutoOff, TimerSchedule, SpeechLead }
+private enum class SettingsDialog {
+    Theme,
+    TimeFormat,
+    ClockStyle,
+    AutoOff,
+    TimerSchedule,
+    SpeechLead,
+}
 
 private val AUTO_OFF_CHOICES = listOf(15, 30, 60, 120)
 
@@ -272,6 +296,13 @@ private fun SettingsRepository.TimeFormat.label(): String = when (this) {
     SettingsRepository.TimeFormat.System -> stringResource(R.string.format_system)
     SettingsRepository.TimeFormat.TwelveHour -> stringResource(R.string.format_12h)
     SettingsRepository.TimeFormat.TwentyFourHour -> stringResource(R.string.format_24h)
+}
+
+@Composable
+private fun SettingsRepository.ClockStyle.label(): String = when (this) {
+    SettingsRepository.ClockStyle.Default -> stringResource(R.string.clock_style_default)
+    SettingsRepository.ClockStyle.SevenSegment ->
+        stringResource(R.string.clock_style_seven_segment)
 }
 
 /** Shared with the speaking-style picker screen. */

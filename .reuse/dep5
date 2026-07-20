@@ -1,0 +1,8 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+
+Files: app/src/main/res/font/talking_clock_seven_segment.ttf
+Copyright: 2017 keshikan (http://www.keshikan.net)
+License: OFL-1.1
+Comment: Digits-and-colon subset of DSEG7 Classic Regular v0.46, renamed to
+ Talking Clock Seven Segment because DSEG is a Reserved Font Name.
+ Upstream: https://github.com/keshikan/DSEG/releases/tag/v0.46

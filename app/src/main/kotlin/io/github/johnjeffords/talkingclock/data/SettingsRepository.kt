@@ -30,11 +30,15 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     /** How the clock's displayed hours follow (or override) the device. */
     enum class TimeFormat { System, TwelveHour, TwentyFourHour }
 
+    /** Typeface used by the main clock and nightstand readouts. */
+    enum class ClockStyle { Default, SevenSegment }
+
     /** One immutable snapshot of every setting. */
     data class Settings(
         // Display
         val theme: ThemeChoice = ThemeChoice.System,
         val timeFormat: TimeFormat = TimeFormat.System,
+        val clockStyle: ClockStyle = ClockStyle.Default,
         val showSeconds: Boolean = true,
         val showDate: Boolean = true,
         // Voice
@@ -75,6 +79,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         Settings(
             theme = prefs[KEY_THEME]?.let(::themeOrDefault) ?: ThemeChoice.System,
             timeFormat = prefs[KEY_TIME_FORMAT]?.let(::formatOrDefault) ?: TimeFormat.System,
+            clockStyle = prefs[KEY_CLOCK_STYLE]?.let(::clockStyleOrDefault) ?: ClockStyle.Default,
             showSeconds = prefs[KEY_SHOW_SECONDS] ?: true,
             showDate = prefs[KEY_SHOW_DATE] ?: true,
             speakingStyle = prefs[KEY_SPEAKING_STYLE]?.let(::styleOrDefault)
@@ -106,6 +111,9 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     private fun formatOrDefault(name: String) =
         TimeFormat.entries.find { it.name == name } ?: TimeFormat.System
 
+    private fun clockStyleOrDefault(name: String) =
+        ClockStyle.entries.find { it.name == name } ?: ClockStyle.Default
+
     private fun styleOrDefault(name: String) =
         SpeakingStyle.entries.find { it.name == name } ?: SpeakingStyle.Conversational
 
@@ -116,6 +124,9 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
 
     suspend fun setTimeFormat(format: TimeFormat) =
         dataStore.edit { it[KEY_TIME_FORMAT] = format.name }
+
+    suspend fun setClockStyle(style: ClockStyle) =
+        dataStore.edit { it[KEY_CLOCK_STYLE] = style.name }
 
     suspend fun setShowSeconds(show: Boolean) =
         dataStore.edit { it[KEY_SHOW_SECONDS] = show }
@@ -179,6 +190,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     companion object {
         private val KEY_THEME = stringPreferencesKey("theme")
         private val KEY_TIME_FORMAT = stringPreferencesKey("time_format")
+        private val KEY_CLOCK_STYLE = stringPreferencesKey("clock_style")
         private val KEY_SHOW_SECONDS = booleanPreferencesKey("show_seconds")
         private val KEY_SHOW_DATE = booleanPreferencesKey("show_date")
         private val KEY_SPEAKING_STYLE = stringPreferencesKey("speaking_style")

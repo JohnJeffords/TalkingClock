@@ -60,6 +60,8 @@ class SettingsViewModel(
     fun setTheme(theme: ThemeChoice) = write { repository.setTheme(theme) }
     fun setTimeFormat(format: SettingsRepository.TimeFormat) =
         write { repository.setTimeFormat(format) }
+    fun setClockStyle(style: SettingsRepository.ClockStyle) =
+        write { repository.setClockStyle(style) }
     fun setShowSeconds(show: Boolean) = write { repository.setShowSeconds(show) }
     fun setShowDate(show: Boolean) = write { repository.setShowDate(show) }
 

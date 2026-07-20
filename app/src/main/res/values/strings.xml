@@ -97,6 +97,7 @@
     <string name="settings_section_behavior">Behavior</string>
     <string name="settings_section_about">About</string>
     <string name="settings_time_format">Time format</string>
+    <string name="settings_clock_style">Clock style</string>
     <string name="settings_show_seconds">Show seconds</string>
     <string name="settings_show_date">Show date</string>
     <string name="settings_speaking_style">Speaking style</string>
@@ -128,6 +129,8 @@
     <string name="format_system">Follow system</string>
     <string name="format_12h">12-hour</string>
     <string name="format_24h">24-hour</string>
+    <string name="clock_style_default">Default</string>
+    <string name="clock_style_seven_segment">Seven-segment</string>
     <string name="style_conversational">Conversational</string>
     <string name="style_digits">Digits</string>
     <string name="style_formal">Formal</string>
@@ -157,6 +160,7 @@
     <!-- About screen -->
     <string name="about_version">Version %1$s</string>
     <string name="about_license">License: GPL-3.0-or-later</string>
+    <string name="about_font_credit">Seven-segment font derived from DSEG by keshikan · OFL-1.1</string>
     <string name="about_source">Source code</string>
     <string name="about_report_issue">Report an issue</string>
     <string name="about_privacy_title">Nothing leaves your phone</string>

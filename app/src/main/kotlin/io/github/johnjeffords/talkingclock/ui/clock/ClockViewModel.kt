@@ -37,6 +37,7 @@ import java.util.Locale
 data class ClockUiState(
     val readout: ClockReadout? = null,
     val showDate: Boolean = true,
+    val clockStyle: SettingsRepository.ClockStyle = SettingsRepository.ClockStyle.Default,
     val armedInterval: SpeakInterval? = null,
     val nextIn: Duration? = null,
     val autoOffIn: Duration? = null,
@@ -90,6 +91,7 @@ class ClockViewModel(
             ClockUiState(
                 readout = TimeFormatter.format(now, use24Hour, settings.showSeconds, locale),
                 showDate = settings.showDate,
+                clockStyle = settings.clockStyle,
                 armedInterval = armed.interval,
                 nextIn = armed.nextAt?.let { remainingUntil(now, it) },
                 autoOffIn = armed.autoOffAt?.let { remainingUntil(now, it) },

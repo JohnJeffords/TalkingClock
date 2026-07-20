@@ -47,6 +47,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import io.github.johnjeffords.talkingclock.R
 import io.github.johnjeffords.talkingclock.TalkingClockApp
+import io.github.johnjeffords.talkingclock.data.SettingsRepository
 import io.github.johnjeffords.talkingclock.ui.alarm.AlarmRoute
 import io.github.johnjeffords.talkingclock.ui.clock.ClockRoute
 import io.github.johnjeffords.talkingclock.ui.clock.ClockViewModel
@@ -100,6 +101,7 @@ fun TalkingClockRoot() {
     NavHost(navController = navController, startDestination = Routes.HOME) {
         composable(Routes.HOME) {
             HomeShell(
+                clockStyle = settings.clockStyle,
                 notificationPermissionAsked = settings.notificationPermissionAsked,
                 onNotificationPermissionAsked =
                     settingsViewModel::setNotificationPermissionAsked,
@@ -116,6 +118,7 @@ fun TalkingClockRoot() {
                     settings = settings,
                     onSetTheme = settingsViewModel::setTheme,
                     onSetTimeFormat = settingsViewModel::setTimeFormat,
+                    onSetClockStyle = settingsViewModel::setClockStyle,
                     onSetShowSeconds = settingsViewModel::setShowSeconds,
                     onSetShowDate = settingsViewModel::setShowDate,
                     onSetAutoOff = settingsViewModel::setAutoOffMinutes,
@@ -245,6 +248,7 @@ fun TalkingClockRoot() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HomeShell(
+    clockStyle: SettingsRepository.ClockStyle,
     notificationPermissionAsked: Boolean,
     onNotificationPermissionAsked: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -260,6 +264,7 @@ private fun HomeShell(
         val uiState by clockViewModel.uiState.collectAsStateWithLifecycle()
         NightstandScreen(
             readout = uiState.readout,
+            clockStyle = clockStyle,
             onExit = { nightstand = false },
         )
         return
