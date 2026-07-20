@@ -12,6 +12,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.core.content.ContextCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import io.github.johnjeffords.talkingclock.domain.stopwatch.StopwatchEngine
+import io.github.johnjeffords.talkingclock.domain.timer.TimerEngine
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
@@ -58,6 +60,10 @@ class SmokeTest {
         composeRule.waitUntil(timeoutMillis = 5_000) {
             !app.currentSettings.notificationPermissionAsked
         }
+        // The application collector and the root SettingsViewModel collect
+        // the same DataStore independently. Let the composed tree observe
+        // the reset before starting a feature.
+        composeRule.waitForIdle()
     }
 
     @Test
@@ -102,7 +108,12 @@ class SmokeTest {
 
         denyNotificationExplanation()
 
-        composeRule.onNodeWithText("Pause").assertExists()
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            app.timerController.state.value.snapshot.phase == TimerEngine.Phase.Running
+        }
+        composeRule.runOnUiThread { app.timerController.pause() }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Resume").assertExists()
         composeRule.onNodeWithText(deniedBanner()).assertExists()
         assertPermissionExplanationPersisted()
     }
@@ -115,7 +126,12 @@ class SmokeTest {
 
         denyNotificationExplanation()
 
-        composeRule.onNodeWithText("Pause").assertExists()
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            app.stopwatchController.state.value.snapshot.phase == StopwatchEngine.Phase.Running
+        }
+        composeRule.runOnUiThread { app.stopwatchController.pause() }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Resume").assertExists()
         composeRule.onNodeWithText(deniedBanner()).assertExists()
         assertPermissionExplanationPersisted()
     }
@@ -125,7 +141,6 @@ class SmokeTest {
             composeRule.onAllNodesWithText("Not now").fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onNodeWithText("Not now").performClick()
-        composeRule.waitForIdle()
     }
 
     private fun deniedBanner(): String =
