@@ -115,3 +115,35 @@ class BootReceiver : BroadcastReceiver() {
         }
     }
 }
+
+/**
+ * Re-books every enabled alarm when the device's time zone or wall clock
+ * changes.
+ *
+ * An alarm is defined by its LOCAL hour and minute (Alarm.kt), but
+ * AlarmManager only takes an absolute instant — so the epoch time booked in
+ * one zone is simply the wrong moment in another. Fly Phoenix → New York
+ * with a 7:00 alarm set and, without this, it fires at 10:00 local and stays
+ * wrong until something else happens to reschedule it.
+ *
+ * [rescheduleAll] recomputes every alarm from its local hour/minute against
+ * the now-current zone, and is idempotent, so re-running it is always safe.
+ */
+class TimeChangeReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action != Intent.ACTION_TIMEZONE_CHANGED &&
+            intent.action != Intent.ACTION_TIME_CHANGED
+        ) {
+            return
+        }
+        val app = context.applicationContext as TalkingClockApp
+        val pending = goAsync()
+        CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
+            try {
+                app.alarmScheduler.rescheduleAll(app.alarmRepository.alarms.first())
+            } finally {
+                pending.finish()
+            }
+        }
+    }
+}

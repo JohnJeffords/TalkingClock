@@ -14,6 +14,7 @@ import io.github.johnjeffords.talkingclock.data.settingsDataStore
 import io.github.johnjeffords.talkingclock.domain.announce.QuietWindow
 import io.github.johnjeffords.talkingclock.domain.announce.SpeakInterval
 import io.github.johnjeffords.talkingclock.domain.stopwatch.StopwatchEngine
+import io.github.johnjeffords.talkingclock.domain.time.SystemZoneClock
 import io.github.johnjeffords.talkingclock.domain.timer.AnnouncementSchedule
 import io.github.johnjeffords.talkingclock.domain.timer.TimerEngine
 import io.github.johnjeffords.talkingclock.service.AnnouncerService
@@ -117,7 +118,10 @@ class TalkingClockApp : Application() {
         announcer = SpeechAnnouncer(speaker) { activePackPlayer }
 
         speakingClockController = SpeakingClockController(
-            clock = java.time.Clock.systemDefaultZone(),
+            // Re-reads the device zone per call, so announcements follow a
+            // time-zone change instead of speaking the old local time until
+            // the process restarts (SystemZoneClock).
+            clock = SystemZoneClock,
             announcer = announcer,
             scope = appScope,
             ensureServiceRunning = { AnnouncerService.ensureRunning(this) },

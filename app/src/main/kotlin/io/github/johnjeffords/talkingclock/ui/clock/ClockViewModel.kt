@@ -11,6 +11,7 @@ import io.github.johnjeffords.talkingclock.data.SettingsRepository
 import io.github.johnjeffords.talkingclock.domain.announce.SpeakInterval
 import io.github.johnjeffords.talkingclock.domain.time.ClockReadout
 import io.github.johnjeffords.talkingclock.domain.time.SecondTicker
+import io.github.johnjeffords.talkingclock.domain.time.SystemZoneClock
 import io.github.johnjeffords.talkingclock.domain.time.TimeFormatter
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -126,7 +127,8 @@ class ClockViewModel(
             initializer {
                 val app = this[APPLICATION_KEY] as TalkingClockApp
                 ClockViewModel(
-                    clock = Clock.systemDefaultZone(),
+                    // Follows time-zone changes; see SystemZoneClock.
+                    clock = SystemZoneClock,
                     locale = Locale.getDefault(),
                     speakingClock = app.speakingClockController,
                     settingsFlow = app.settingsRepository.settings,

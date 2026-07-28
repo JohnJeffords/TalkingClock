@@ -98,6 +98,18 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
+        <!-- Re-books alarms when the zone or wall clock moves: an alarm is a
+             LOCAL hour/minute, but AlarmManager holds an absolute instant, so
+             the booked moment is wrong in the new zone until recomputed. -->
+        <receiver
+            android:name=".alarm.TimeChangeReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
