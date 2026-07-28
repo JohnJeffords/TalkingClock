@@ -3,6 +3,8 @@ package io.github.johnjeffords.talkingclock.voicepack
 import android.media.AudioAttributes
 import android.media.SoundPool
 import io.github.johnjeffords.talkingclock.domain.voicepack.PhraseComposer
+import io.github.johnjeffords.talkingclock.speech.PackVoice
+import io.github.johnjeffords.talkingclock.speech.PlayResult
 import io.github.johnjeffords.talkingclock.speech.Utterance
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -23,7 +25,7 @@ class VoicePackPlayer(
     private val store: VoicePackStore,
     private val pack: VoicePackStore.InstalledPack,
     private val scope: CoroutineScope,
-) {
+) : PackVoice {
 
     private val soundPool: SoundPool = SoundPool.Builder()
         .setMaxStreams(1) // clips play strictly one at a time
@@ -57,23 +59,23 @@ class VoicePackPlayer(
         }
     }
 
-    /**
-     * Try to voice [utterance] from clips. Returns false — and plays
-     * nothing — when the pack can't fully voice it (missing tokens or
-     * clips still loading), so the caller can fall back to TTS for the
-     * WHOLE utterance.
-     */
-    fun tryPlay(utterance: Utterance, priority: Int): Boolean {
-        val tokens = PhraseComposer.compose(pack.manifest, utterance) ?: return false
+    /** Try to voice [utterance] from clips; see [PlayResult]. */
+    override fun play(utterance: Utterance, priority: Int): PlayResult {
+        val tokens = PhraseComposer.compose(pack.manifest, utterance)
+            ?: return PlayResult.Unsupported
 
         // Every needed clip must be loaded and decodable before we commit.
         val samples = tokens.map { token ->
-            val id = sampleIds[token] ?: return false
-            if (id !in synchronized(loadedSamples) { loadedSamples.toSet() }) return false
+            val id = sampleIds[token] ?: return PlayResult.Unsupported
+            if (id !in synchronized(loadedSamples) { loadedSamples.toSet() }) {
+                return PlayResult.Unsupported
+            }
             token to id
         }
 
-        if (playJob?.isActive == true && priority < playingPriority) return false
+        if (playJob?.isActive == true && priority < playingPriority) {
+            return PlayResult.DroppedForPriority
+        }
 
         playJob?.cancel()
         playingPriority = priority
@@ -88,11 +90,11 @@ class VoicePackPlayer(
                 playingPriority = Int.MIN_VALUE
             }
         }
-        return true
+        return PlayResult.Played
     }
 
     /** Stop mid-utterance. */
-    fun stop() {
+    override fun stop() {
         playJob?.cancel()
         playJob = null
         soundPool.autoPause()
