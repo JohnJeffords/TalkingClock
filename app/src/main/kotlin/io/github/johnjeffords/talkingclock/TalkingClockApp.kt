@@ -179,12 +179,20 @@ class TalkingClockApp : Application() {
 
         wireQuietHours()
         wireSettingsIntoConsumers()
-        wireEnginePersistence()
-        restoreSavedState()
-        // Re-sync AlarmManager with the stored alarms at every process start
-        // (cheap, idempotent, and covers app-update process restarts that
-        // BootReceiver doesn't).
-        appScope.launch { alarmScheduler.rescheduleAll(alarmRepository.alarms.first()) }
+        // ORDER MATTERS. The persistence collectors' very first emission is
+        // the controllers' initial Idle, which CLEARS the saved keys — so it
+        // must not run until restore has read them, or an interrupted run is
+        // erased on the way back. Settings go first for the same reason:
+        // a restored run latches the user's real speech lead, not zero.
+        appScope.launch {
+            applySettings(settingsRepository.settings.first())
+            restoreSavedState()
+            wireEnginePersistence()
+            // Re-sync AlarmManager with the stored alarms at every process
+            // start (cheap, idempotent, and covers app-update process
+            // restarts that BootReceiver doesn't).
+            alarmScheduler.rescheduleAll(alarmRepository.alarms.first())
+        }
     }
 
     /** Quiet-hours checks: clock/stopwatch silenced by the window; timers
@@ -210,33 +218,41 @@ class TalkingClockApp : Application() {
     /** One collector pushes each settings change to every consumer. */
     private fun wireSettingsIntoConsumers() {
         settingsRepository.settings
-            .onEach { settings ->
-                currentSettings = settings
-                speakingClockController.speakingStyle = settings.speakingStyle
-                speakingClockController.defaultAutoOff =
-                    Duration.ofMinutes(settings.autoOffMinutes.toLong())
-                speakingClockController.lastCustomInterval =
-                    settings.lastCustomIntervalSeconds
-                        ?.takeIf { it in SpeakInterval.MIN_SECONDS..SpeakInterval.MAX_SECONDS }
-                        ?.let(::SpeakInterval)
-                timerController.selectSchedule(
-                    AnnouncementSchedule.BUILT_INS.find { it.name == settings.timerScheduleName }
-                        ?: AnnouncementSchedule.GAME,
-                )
-                timerController.restoreLastDuration(
-                    Duration.ofSeconds(settings.lastTimerDurationSeconds),
-                )
-                stopwatchController.setSpeakElapsed(settings.stopwatchSpeakElapsed)
-                stopwatchController.setSpeakLaps(settings.stopwatchSpeakLaps)
-                // Same latency-compensation lead feeds both counting tools.
-                val speechLead = Duration.ofMillis(settings.speechLeadMillis.toLong())
-                timerController.speechLead = speechLead
-                stopwatchController.speechLead = speechLead
-                ttsSpeaker.setRate(settings.ttsRate)
-                ttsSpeaker.setPitch(settings.ttsPitch)
-                switchVoicePackIfNeeded(settings.voicePackId)
-            }
+            .onEach { applySettings(it) }
             .launchIn(appScope)
+    }
+
+    /**
+     * Push one settings snapshot into everything that consumes it. Separate
+     * from the collector so startup can apply the stored settings ONCE, up
+     * front — a restored run has to latch the user's real speech lead, not
+     * the initial zero it would see if restore beat the collector.
+     */
+    private suspend fun applySettings(settings: SettingsRepository.Settings) {
+        currentSettings = settings
+        speakingClockController.speakingStyle = settings.speakingStyle
+        speakingClockController.defaultAutoOff =
+            Duration.ofMinutes(settings.autoOffMinutes.toLong())
+        speakingClockController.lastCustomInterval =
+            settings.lastCustomIntervalSeconds
+                ?.takeIf { it in SpeakInterval.MIN_SECONDS..SpeakInterval.MAX_SECONDS }
+                ?.let(::SpeakInterval)
+        timerController.selectSchedule(
+            AnnouncementSchedule.BUILT_INS.find { it.name == settings.timerScheduleName }
+                ?: AnnouncementSchedule.GAME,
+        )
+        timerController.restoreLastDuration(
+            Duration.ofSeconds(settings.lastTimerDurationSeconds),
+        )
+        stopwatchController.setSpeakElapsed(settings.stopwatchSpeakElapsed)
+        stopwatchController.setSpeakLaps(settings.stopwatchSpeakLaps)
+        // Same latency-compensation lead feeds both counting tools.
+        val speechLead = Duration.ofMillis(settings.speechLeadMillis.toLong())
+        timerController.speechLead = speechLead
+        stopwatchController.speechLead = speechLead
+        ttsSpeaker.setRate(settings.ttsRate)
+        ttsSpeaker.setPitch(settings.ttsPitch)
+        switchVoicePackIfNeeded(settings.voicePackId)
     }
 
     /** Build/tear down the pack player when the voice-source setting changes. */
@@ -305,16 +321,18 @@ class TalkingClockApp : Application() {
             .launchIn(appScope)
     }
 
-    /** Bring back interrupted runs (as paused — see the controllers' docs). */
-    private fun restoreSavedState() {
-        appScope.launch {
-            engineStateStore.loadTimer()?.let { saved ->
-                timerController.restorePaused(saved.duration, saved.remaining)
-            }
-            engineStateStore.loadStopwatch()?.let { saved ->
-                if (!saved.elapsed.isZero) {
-                    stopwatchController.restorePaused(saved.elapsed, saved.laps)
-                }
+    /**
+     * Bring back interrupted runs (as paused — see the controllers' docs).
+     * Suspends rather than launching its own job so startup can guarantee it
+     * finishes BEFORE the persistence collectors begin clearing Idle state.
+     */
+    private suspend fun restoreSavedState() {
+        engineStateStore.loadTimer()?.let { saved ->
+            timerController.restorePaused(saved.duration, saved.remaining)
+        }
+        engineStateStore.loadStopwatch()?.let { saved ->
+            if (!saved.elapsed.isZero) {
+                stopwatchController.restorePaused(saved.elapsed, saved.laps)
             }
         }
     }

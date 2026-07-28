@@ -131,7 +131,18 @@ object Phrasebook {
 
     /** "one minute" / "five minutes" — number words + pluralized unit. */
     private fun unit(n: Int, unitName: String): String =
-        "${numberWords(n)} $unitName${if (n == 1) "" else "s"}"
+        "${countWords(n)} $unitName${if (n == 1) "" else "s"}"
+
+    /**
+     * Words for a COUNT of units, which — unlike a clock face — has no upper
+     * bound: minutes and seconds are always 0..59, but hours come from the
+     * duration itself (a keyed-in 99-hour timer, or a stopwatch left running
+     * for days). Beyond the word table the digits read fine and, more to the
+     * point, never throw — [durationWords] must be total, because it renders
+     * AFTER the engine has already started.
+     */
+    private fun countWords(n: Int): String =
+        if (n in 0..99) numberWords(n) else "$n"
 
     // --- Stopwatch phrases ---------------------------------------------------
 
@@ -147,18 +158,29 @@ object Phrasebook {
     fun stopwatchElapsed(elapsed: java.time.Duration): String =
         durationWords(elapsed).replaceFirstChar(Char::uppercase)
 
-    // --- Number-to-words (0..59 is all a clock needs) -----------------------
+    // --- Number-to-words ----------------------------------------------------
 
     private val ones = listOf(
         "zero", "one", "two", "three", "four", "five", "six", "seven",
         "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen",
         "fifteen", "sixteen", "seventeen", "eighteen", "nineteen",
     )
-    private val tens = listOf("", "", "twenty", "thirty", "forty", "fifty")
+    private val tens = listOf(
+        "", "", "twenty", "thirty", "forty", "fifty",
+        "sixty", "seventy", "eighty", "ninety",
+    )
 
-    /** English words for 0..59, e.g. 24 -> "twenty-four". */
+    /**
+     * English words for 0..99, e.g. 24 -> "twenty-four".
+     *
+     * A clock face only ever needs 0..59, but a typed timer DURATION can
+     * carry up to 99 hours (the keypad is six digits, HHMMSS, and D-015 puts
+     * no sub-60-hour limit on it). Sixty-plus therefore has to be speakable:
+     * while this stopped at 59, starting a 60-hour timer threw while
+     * rendering "Timer started: …" — after the engine was already running.
+     */
     fun numberWords(n: Int): String {
-        require(n in 0..59) { "A clock never speaks $n; only 0..59 supported" }
+        require(n in 0..99) { "Only 0..99 is speakable, was $n" }
         return when {
             n < 20 -> ones[n]
             n % 10 == 0 -> tens[n / 10]
