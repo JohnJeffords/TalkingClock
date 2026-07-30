@@ -6,8 +6,8 @@ game-style ("Five minutes remaining… five, four, three, two, one — time's up
 and does it all with a tiny APK, no trackers, no proprietary code, and almost no
 permissions.
 
-> **Status: design phase.** Nothing is implemented yet. This repo currently
-> contains the design documents that will drive implementation.
+> **Status: work in progress.** The basic app is created. The main thing I'm
+> focused on right now is UX testing.
 
 ## Who it's for
 
@@ -19,23 +19,22 @@ instead of invisible. Every feature gets judged against that person's morning.
 
 ## Goals
 
-1. **FOSS** publishable on F-Droid with no anti-features such as:
-   closed-source binaries, analytics, network access. 
-2. **Tiny file size**
-3. **Minimal permissions** — no permissions except an *optional*
-   `POST_NOTIFICATIONS` prompt (Android 13+) so the timer's foreground-service
-   notification is visible. 
-4. **Works on de-Googled Android** — first-class support for GrapheneOS and
+1. **Designed for F-Droid** publishable on F-Droid with no anti-features such as:
+   closed-source binaries, analytics, network access. No permissions will be needed
+   except an optional notification prompt for when the talking clock is running.
+2. **Works on de-Googled Android** — first-class support for GrapheneOS and
    CalyxOS, including graceful handling of the "no TTS engine installed" case.
-5. **All assets open** — icon, fonts, and any sounds under OFL / CC0 / GPL,
+3. **Tiny file size**
+4. **All assets open** — icon, fonts, and any sounds under OFL / CC0 / GPL,
    tracked with the [REUSE](https://reuse.software/) spec.
-6. **Readable by a beginner** — see [docs/CODE_STYLE.md](docs/CODE_STYLE.md).
+5. **Code and documentation should be readable by a beginner** — see [docs/CODE_STYLE.md](docs/CODE_STYLE.md).
 
 ## The three screens
 
 | Screen | One-liner |
 |---|---|
 | **Clock** | Big digital clock with seconds; pick a speak interval (15 s … 1 h, or custom) and it announces the time aloud. |
+| **Alarm** | Still needs a description (WIP). |
 | **Talking Timer** | Type a duration (last one is remembered), pick an announcement schedule, and get game-announcer-style spoken milestones; one active timer at a time. |
 | **Stopwatch** | Count-up with laps; optional spoken interval and lap announcements. |
 
@@ -58,8 +57,9 @@ Full UX in [docs/DESIGN.md](docs/DESIGN.md).
 
 ## Key pitfalls we're designing around
 
-- **GrapheneOS/CalyxOS ship no TTS engine.** Google TTS is proprietary and
-  absent there. The app detects a missing/broken engine and walks the user
+- **Neither GrapheneOS or CalyxOS ship with a TTS engine.**
+  Google TTS is proprietary and absent there.
+  The app detects a missing/broken engine and walks the user
   through installing a FOSS one (RHVoice, eSpeak NG — both on F-Droid).
   We deliberately do **not** bundle a TTS engine into the app (see D-011 in
   the decision log).
@@ -70,12 +70,12 @@ Full UX in [docs/DESIGN.md](docs/DESIGN.md).
 
 ## Name & package id
 
-Official name: **Talking Clock (OSS)** (decided 2026-07-15).
+Official name: **Talking Clock (OSS)**.
 Repository: <https://github.com/JohnJeffords/TalkingClock>.
 Package id: `io.github.johnjeffords.talkingclock` (the `io.github.<username>`
 convention lets F-Droid verify ownership trivially).
 
 ## License
-
+Todo: Fix this section:
 GPL-3.0-or-later (add the `LICENSE` file from
-<https://www.gnu.org/licenses/gpl-3.0.txt> when implementation starts).
+<https://www.gnu.org/licenses/gpl-3.0.txt>).
