@@ -17,32 +17,19 @@ The core idea: you shouldn't have to *remember to look at a clock*; the clock
 should keep quietly telling you, at a rhythm you choose, so time stays ambient
 instead of invisible. Every feature gets judged against that person's morning.
 
-## Learning project
-
-The project owner is using this app to learn software development. That is a
-**design constraint, not a footnote**: the codebase must be readable by a
-relatively new coder browsing GitHub — self-documenting names, generous
-comments (including places experienced devs wouldn't bother commenting),
-boringly standard structure, and documentation complete enough that a new AI
-agent or human contributor can pick up mid-project with zero chat history.
-See [docs/CODE_STYLE.md](docs/CODE_STYLE.md) — binding for all contributors,
-human or AI.
-
 ## Goals
 
-1. **FOSS to the bone** — publishable on F-Droid with zero anti-features:
-   no closed-source binaries, no Google Play Services, no analytics, no
-   network access at all. License: **GPL-3.0-or-later**.
-2. **Tiny and smooth** — release APK budget **≤ 4 MB**, steady 60 fps,
-   near-zero battery cost when idle.
-3. **Minimal permissions** — no dangerous permissions except an *optional*
+1. **FOSS** publishable on F-Droid with no anti-features such as:
+   closed-source binaries, analytics, network access. 
+2. **Tiny file size**
+3. **Minimal permissions** — no permissions except an *optional*
    `POST_NOTIFICATIONS` prompt (Android 13+) so the timer's foreground-service
-   notification is visible. No internet, no storage, no location, nothing else.
+   notification is visible. 
 4. **Works on de-Googled Android** — first-class support for GrapheneOS and
    CalyxOS, including graceful handling of the "no TTS engine installed" case.
 5. **All assets open** — icon, fonts, and any sounds under OFL / CC0 / GPL,
    tracked with the [REUSE](https://reuse.software/) spec.
-6. **Readable by a beginner** — see "Learning project" above.
+6. **Readable by a beginner** — see [docs/CODE_STYLE.md](docs/CODE_STYLE.md).
 
 ## The three screens
 
@@ -76,12 +63,10 @@ Full UX in [docs/DESIGN.md](docs/DESIGN.md).
   through installing a FOSS one (RHVoice, eSpeak NG — both on F-Droid).
   We deliberately do **not** bundle a TTS engine into the app (see D-011 in
   the decision log).
-- **Timers must never use the wall clock.** Wall-clock time jumps (NTP, time
+- **Timers must never use the clock,** as the clock time jumps (NTP, time
   zones, manual changes). Timer & stopwatch run on `elapsedRealtime()`.
 - **A ticking clock can be a battery/framerate trap.** One state update per
   second, aligned to the second boundary — never a per-frame loop while idle.
-- **Play Console personal accounts (created after Nov 2023) must run a closed
-  test with 12 testers for 14 days** before production release. Plan for it.
 
 ## Name & package id
 
