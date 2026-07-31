@@ -10,15 +10,14 @@ app — the app does the remembering. Every spoken feature is individually
 toggleable in Settings, because the difference between "helpful rhythm" and
 "noise" is personal.
 
-Three screens, one navigation drawer ("sandwich"/hamburger menu), one settings
+Four tools, one navigation drawer ("sandwich"/hamburger menu), one settings
 screen. Material 3, dynamic color where available, dark theme by default with a
 true-black (AMOLED) option.
 
-Navigation: bottom navigation bar with three destinations — **Clock**,
-**Timer**, **Stopwatch** — plus a hamburger icon in the top app bar opening a
-drawer with **Settings** and **About**. (Bottom nav beats swipe-only paging for
-accessibility and one-handed use; swiping between the three screens is also
-supported as a bonus, not the only path.)
+Navigation: bottom navigation bar with four destinations — **Clock**,
+**Alarm**, **Timer**, **Stopwatch** — plus a hamburger icon in the top app bar
+opening a drawer with **Settings** and **About**. Bottom navigation keeps every
+tool reachable without relying on swipe gestures.
 
 ---
 
@@ -80,7 +79,21 @@ time.
 
 ---
 
-## 2. Talking Timer screen
+## 2. Talking Alarm screen
+
+- Create one-shot or repeating alarms with an optional label and vibration.
+- The full-screen ringing view appears over the lock screen and offers
+  **Snooze** and **Dismiss**.
+- Alarms can announce the current time while ringing.
+- On dismissal, an alarm can optionally arm the speaking clock at a chosen
+  interval and auto-off duration. This handoff is the alarm feature's main
+  purpose: the alarm wakes the user, then the clock keeps the morning visible.
+- Exact alarms are restored after reboot and recalculated after manual time or
+  time-zone changes.
+
+---
+
+## 3. Talking Timer screen
 
 ```
 ┌──────────────────────────────┐
@@ -144,7 +157,7 @@ TF2-announcer fantasy really lands.
 
 ---
 
-## 3. Stopwatch screen
+## 4. Stopwatch screen
 
 Deliberately the simplest screen.
 
@@ -183,7 +196,7 @@ Deliberately the simplest screen.
 
 ---
 
-## 4. Settings (via hamburger drawer)
+## 5. Settings (via hamburger drawer)
 
 Grouped, searchable-by-eyeball, one screen with sections:
 
@@ -238,8 +251,6 @@ Grouped, searchable-by-eyeball, one screen with sections:
 
 - Home-screen widget (a per-second widget is a battery/API minefield; a
   minute-precision one is possible later via `TextClock`)
-- Alarms (a whole different app + exact-alarm permission territory — keeping
-  this app alarm-free is what keeps its permission story clean)
 - Wear OS companion
 - Per-app language picker UI (Android 13 gives this for free via
   `localeConfig`; we ship the manifest bit, just no custom UI)
