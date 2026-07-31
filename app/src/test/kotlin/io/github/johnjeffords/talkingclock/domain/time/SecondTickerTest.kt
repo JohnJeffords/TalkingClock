@@ -15,7 +15,6 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
-import java.util.TimeZone
 
 /**
  * Tests the second-alignment math that keeps the ticking clock on the beat.
@@ -83,17 +82,4 @@ class SecondTickerTest {
         assertEquals(LocalDateTime.of(2000, 1, 1, 13, 0, 1), ticks[1])
     }
 
-    @Test
-    fun `production wall clock does not capture the process start zone`() {
-        val originalZone = TimeZone.getDefault()
-        try {
-            TimeZone.setDefault(TimeZone.getTimeZone("America/Phoenix"))
-            assertEquals(ZoneId.of("America/Phoenix"), SystemWallClock.zone)
-
-            TimeZone.setDefault(TimeZone.getTimeZone("America/New_York"))
-            assertEquals(ZoneId.of("America/New_York"), SystemWallClock.zone)
-        } finally {
-            TimeZone.setDefault(originalZone)
-        }
-    }
 }

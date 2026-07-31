@@ -1,5 +1,6 @@
 package io.github.johnjeffords.talkingclock.ui.timer
 
+import io.github.johnjeffords.talkingclock.domain.speech.Phrasebook
 import io.github.johnjeffords.talkingclock.ui.timer.TimerViewModel.Companion.digitsFor
 import io.github.johnjeffords.talkingclock.ui.timer.TimerViewModel.Companion.durationFor
 import org.junit.Assert.assertEquals
@@ -26,6 +27,20 @@ class TimerKeypadMathTest {
     fun `oversized minutes are taken literally like Google Clock`() {
         // "9000" = 90 minutes 00 seconds, not an error.
         assertEquals(Duration.ofMinutes(90), durationFor("9000"))
+    }
+
+    @Test
+    fun `every duration the keypad can express is speakable`() {
+        // Regression: the keypad happily produced 60 h+, but the start
+        // announcement threw while rendering it — after the engine had
+        // already started, so the process went down mid-run.
+        assertEquals(Duration.ofHours(60), durationFor("600000"))
+        assertEquals(
+            "Timer started: sixty hours",
+            Phrasebook.timerStarted(durationFor("600000")),
+        )
+        // The keypad's maximum must survive the same path.
+        Phrasebook.timerStarted(durationFor("995959"))
     }
 
     @Test

@@ -2,89 +2,127 @@ package io.github.johnjeffords.talkingclock.speech
 
 import io.github.johnjeffords.talkingclock.announce.SpeakingClockController
 import io.github.johnjeffords.talkingclock.domain.announce.SpeakInterval
-import io.github.johnjeffords.talkingclock.voicepack.VoicePackPlayer.PlayResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
 
 class SpeechAnnouncerTest {
 
-    private val speaker = FakeSpeaker()
-    private val announcer = SpeechAnnouncer(speaker) { null }
-    private val utterance = Utterance.Raw("lower priority")
+    private class FakePack(private val answers: MutableList<PlayResult>) : PackVoice {
+        val played = mutableListOf<String>()
+        var stopCount = 0
+            private set
+        private var activePriority: Int? = null
 
-    @Test
-    fun `a priority-dropped pack utterance does not fall back to TTS`() {
-        announcer.deliver(utterance, Speaker.PRIORITY_CLOCK, PlayResult.Dropped)
+        override fun play(utterance: Utterance, priority: Int): PlayResult {
+            val result = answers.removeAt(0)
+            if (result == PlayResult.Played) {
+                played += utterance.toText()
+                activePriority = priority
+            }
+            return result
+        }
 
-        assertEquals(emptyList<String>(), speaker.spoken)
-        assertEquals(0, speaker.stopCount)
+        override fun stop() {
+            stopCount++
+            activePriority = null
+        }
+
+        override fun stop(priority: Int) {
+            if (activePriority == priority) stop()
+        }
     }
 
-    @Test
-    fun `an unsupported pack utterance falls back to TTS`() {
-        announcer.deliver(utterance, Speaker.PRIORITY_CLOCK, PlayResult.Unsupported)
-
-        assertEquals(listOf("lower priority"), speaker.spoken)
-    }
+    private val stopwatchCue = Utterance.StopwatchElapsed(Duration.ofSeconds(10))
 
     @Test
-    fun `a playing pack stops stale TTS without speaking a fallback`() {
-        announcer.deliver(utterance, Speaker.PRIORITY_CLOCK, PlayResult.Played)
+    fun `a pack-voiced utterance silences TTS and reports playback`() {
+        val speaker = FakeSpeaker()
+        val pack = FakePack(mutableListOf(PlayResult.Played))
+        var reportedPriority: Int? = null
+        val announcer = SpeechAnnouncer(
+            speaker = speaker,
+            onAnnounce = { reportedPriority = it },
+            activePack = { pack },
+        )
 
+        announcer.announce(stopwatchCue, Speaker.PRIORITY_STOPWATCH)
+
+        assertEquals(listOf("Ten seconds"), pack.played)
         assertEquals(emptyList<String>(), speaker.spoken)
         assertEquals(1, speaker.stopCount)
+        assertEquals(Speaker.PRIORITY_STOPWATCH, reportedPriority)
     }
 
     @Test
-    fun `an announcement reports its priority for optional haptic feedback`() {
+    fun `an unsupported pack utterance falls back to TTS and reports playback`() {
+        val speaker = FakeSpeaker()
+        val pack = FakePack(mutableListOf(PlayResult.Unsupported))
         var reportedPriority: Int? = null
-        val reportingAnnouncer = SpeechAnnouncer(
+        val announcer = SpeechAnnouncer(
             speaker = speaker,
             onAnnounce = { reportedPriority = it },
-            activePack = { null },
+            activePack = { pack },
         )
 
-        reportingAnnouncer.announce(utterance, Speaker.PRIORITY_TIMER)
+        announcer.announce(stopwatchCue, Speaker.PRIORITY_STOPWATCH)
 
-        assertEquals(Speaker.PRIORITY_TIMER, reportedPriority)
+        assertEquals(emptyList<String>(), pack.played)
+        assertEquals(listOf("Ten seconds"), speaker.spoken)
+        assertEquals(Speaker.PRIORITY_STOPWATCH, reportedPriority)
     }
 
     @Test
-    fun `a priority-dropped pack utterance does not trigger haptic feedback`() {
+    fun `an utterance dropped for priority stays silent and reports nothing`() {
+        val speaker = FakeSpeaker()
+        val pack = FakePack(mutableListOf(PlayResult.DroppedForPriority))
         var reportedPriority: Int? = null
-        val reportingAnnouncer = SpeechAnnouncer(
+        val announcer = SpeechAnnouncer(
             speaker = speaker,
             onAnnounce = { reportedPriority = it },
-            activePack = { null },
+            activePack = { pack },
         )
 
-        reportingAnnouncer.deliver(utterance, Speaker.PRIORITY_CLOCK, PlayResult.Dropped)
+        announcer.announce(stopwatchCue, Speaker.PRIORITY_STOPWATCH)
 
+        assertEquals(emptyList<String>(), pack.played)
+        assertEquals(emptyList<String>(), speaker.spoken)
+        assertEquals(0, speaker.stopCount)
         assertEquals(null, reportedPriority)
     }
 
     @Test
-    fun `disarming clock through shared announcer does not stop timer speech`() = runTest {
-        val ownershipSpeaker = OwnershipSpeaker()
-        val sharedAnnouncer = SpeechAnnouncer(ownershipSpeaker) { null }
+    fun `with no pack selected everything goes to TTS`() {
+        val speaker = FakeSpeaker()
+        val announcer = SpeechAnnouncer(speaker) { null }
+
+        announcer.announce(stopwatchCue, Speaker.PRIORITY_STOPWATCH)
+
+        assertEquals(listOf("Ten seconds"), speaker.spoken)
+    }
+
+    @Test
+    fun `disarming clock does not stop timer speech`() = runTest {
+        val speaker = OwnershipSpeaker()
+        val announcer = SpeechAnnouncer(speaker) { null }
         val clock = SpeakingClockController(
             clock = Clock.fixed(Instant.parse("2026-07-17T12:00:00Z"), ZoneOffset.UTC),
-            announcer = sharedAnnouncer,
+            announcer = announcer,
             scope = backgroundScope,
             ensureServiceRunning = {},
         )
         clock.arm(SpeakInterval(60))
-        sharedAnnouncer.announce(Utterance.Raw("One minute remaining"), Speaker.PRIORITY_TIMER)
+        announcer.announce(Utterance.Raw("One minute remaining"), Speaker.PRIORITY_TIMER)
 
         clock.disarm()
 
-        assertEquals(Speaker.PRIORITY_TIMER, ownershipSpeaker.activePriority)
+        assertEquals(Speaker.PRIORITY_TIMER, speaker.activePriority)
     }
 
     private class OwnershipSpeaker : Speaker {

@@ -21,9 +21,9 @@ import io.github.johnjeffords.talkingclock.data.settingsDataStore
 import io.github.johnjeffords.talkingclock.domain.announce.QuietWindow
 import io.github.johnjeffords.talkingclock.domain.announce.SpeakInterval
 import io.github.johnjeffords.talkingclock.domain.stopwatch.StopwatchEngine
+import io.github.johnjeffords.talkingclock.domain.time.SystemZoneClock
 import io.github.johnjeffords.talkingclock.domain.timer.AnnouncementSchedule
 import io.github.johnjeffords.talkingclock.domain.timer.TimerEngine
-import io.github.johnjeffords.talkingclock.domain.time.SystemWallClock
 import io.github.johnjeffords.talkingclock.service.AnnouncerService
 import io.github.johnjeffords.talkingclock.speech.Announcer
 import io.github.johnjeffords.talkingclock.speech.Speaker
@@ -115,7 +115,7 @@ class TalkingClockApp : Application() {
         private set
 
     /** Wall clock shared by display and speech; its system zone is dynamic. */
-    internal var wallClock: Clock = SystemWallClock
+    internal var wallClock: Clock = SystemZoneClock
 
     /**
      * Process-lifetime scope for controllers and settings plumbing. Keeping it
@@ -212,11 +212,8 @@ class TalkingClockApp : Application() {
             restoreSavedState()
             wireEnginePersistence()
             wireSettingsIntoConsumers()
+            alarmScheduler.rescheduleAll(alarmRepository.alarms.first())
         }
-        // Re-sync AlarmManager with the stored alarms at every process start
-        // (cheap, idempotent, and covers app-update process restarts that
-        // BootReceiver doesn't).
-        appScope.launch { alarmScheduler.rescheduleAll(alarmRepository.alarms.first()) }
     }
 
     /** Re-align all local wall-clock work after a time or zone change. */
@@ -267,6 +264,12 @@ class TalkingClockApp : Application() {
             .launchIn(appScope)
     }
 
+    /**
+     * Push one settings snapshot into everything that consumes it. Separate
+     * from the collector so startup can apply the stored settings ONCE, up
+     * front — a restored run has to latch the user's real speech lead, not
+     * the initial zero it would see if restore beat the collector.
+     */
     private suspend fun applySettings(settings: SettingsRepository.Settings) {
         currentSettings = settings
         speakingClockController.speakingStyle = settings.speakingStyle
@@ -360,7 +363,11 @@ class TalkingClockApp : Application() {
             .launchIn(appScope)
     }
 
-    /** Bring back interrupted runs (as paused — see the controllers' docs). */
+    /**
+     * Bring back interrupted runs (as paused — see the controllers' docs).
+     * Suspends rather than launching its own job so startup can guarantee it
+     * finishes BEFORE the persistence collectors begin clearing Idle state.
+     */
     private suspend fun restoreSavedState() {
         engineStateStore.loadTimer()?.let { saved ->
             timerController.restorePaused(saved.duration, saved.remaining)

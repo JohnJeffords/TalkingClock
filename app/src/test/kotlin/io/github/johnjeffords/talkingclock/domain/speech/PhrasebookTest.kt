@@ -191,10 +191,6 @@ class PhrasebookTest {
             "Timer started: one hour, thirty minutes",
             Phrasebook.timerStarted(java.time.Duration.ofMinutes(90)),
         )
-        assertEquals(
-            "Timer started: 60 hours",
-            Phrasebook.timerStarted(java.time.Duration.ofHours(60)),
-        )
     }
 
     // --- Stopwatch phrases ---
@@ -235,8 +231,43 @@ class PhrasebookTest {
     }
 
     @Test
+    fun `number words cover the duration range past the clock face`() {
+        // A typed timer can be up to 99 hours (six-digit keypad, D-015), so
+        // sixty-plus has to be speakable even though no clock face needs it.
+        assertEquals("sixty", Phrasebook.numberWords(60))
+        assertEquals("seventy-two", Phrasebook.numberWords(72))
+        assertEquals("ninety-nine", Phrasebook.numberWords(99))
+    }
+
+    @Test
     fun `number words reject out-of-range values`() {
-        assertThrows(IllegalArgumentException::class.java) { Phrasebook.numberWords(60) }
+        assertThrows(IllegalArgumentException::class.java) { Phrasebook.numberWords(100) }
         assertThrows(IllegalArgumentException::class.java) { Phrasebook.numberWords(-1) }
+    }
+
+    // --- Long durations (the 60-hour timer crash) ---
+
+    @Test
+    fun `a sixty-hour timer speaks instead of throwing`() {
+        // Regression: the keypad accepts 600000 (60 h) and the start
+        // announcement rendered AFTER the engine was running, so a throw here
+        // took the process down with a half-started timer.
+        assertEquals(
+            "Timer started: sixty hours",
+            Phrasebook.timerStarted(java.time.Duration.ofHours(60)),
+        )
+        assertEquals(
+            "ninety-nine hours, fifty-nine minutes, fifty-nine seconds",
+            Phrasebook.durationWords(
+                java.time.Duration.ofHours(99).plusMinutes(59).plusSeconds(59),
+            ),
+        )
+    }
+
+    @Test
+    fun `duration words stay total past the word table`() {
+        // A stopwatch left running for days must never throw mid-announcement;
+        // past the word table the digits carry it (engines read them fine).
+        assertEquals("100 hours", Phrasebook.durationWords(java.time.Duration.ofHours(100)))
     }
 }

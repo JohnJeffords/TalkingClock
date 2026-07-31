@@ -3,6 +3,8 @@ package io.github.johnjeffords.talkingclock.voicepack
 import android.media.AudioAttributes
 import android.media.SoundPool
 import io.github.johnjeffords.talkingclock.domain.voicepack.PhraseComposer
+import io.github.johnjeffords.talkingclock.speech.PackVoice
+import io.github.johnjeffords.talkingclock.speech.PlayResult
 import io.github.johnjeffords.talkingclock.speech.Utterance
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -23,7 +25,7 @@ class VoicePackPlayer(
     private val store: VoicePackStore,
     private val pack: VoicePackStore.InstalledPack,
     private val scope: CoroutineScope,
-) {
+) : PackVoice {
 
     private val soundPool: SoundPool = SoundPool.Builder()
         .setMaxStreams(1) // clips play strictly one at a time
@@ -57,14 +59,10 @@ class VoicePackPlayer(
         }
     }
 
-    /**
-     * Try to voice [utterance] from clips. [PlayResult.Unsupported] means
-     * the caller should fall back to TTS for the whole utterance;
-     * [PlayResult.Dropped] means a higher-priority pack utterance is already
-     * playing and the caller must stay silent.
-     */
-    fun tryPlay(utterance: Utterance, priority: Int): PlayResult {
-        val tokens = PhraseComposer.compose(pack.manifest, utterance) ?: return PlayResult.Unsupported
+    /** Try to voice [utterance] from clips; see [PlayResult]. */
+    override fun play(utterance: Utterance, priority: Int): PlayResult {
+        val tokens = PhraseComposer.compose(pack.manifest, utterance)
+            ?: return PlayResult.Unsupported
 
         // Every needed clip must be loaded and decodable before we commit.
         val samples = tokens.map { token ->
@@ -75,7 +73,9 @@ class VoicePackPlayer(
             token to id
         }
 
-        if (playJob?.isActive == true && priority < playingPriority) return PlayResult.Dropped
+        if (playJob?.isActive == true && priority < playingPriority) {
+            return PlayResult.DroppedForPriority
+        }
 
         playJob?.cancel()
         playingPriority = priority
@@ -94,7 +94,7 @@ class VoicePackPlayer(
     }
 
     /** Stop mid-utterance. */
-    fun stop() {
+    override fun stop() {
         playJob?.cancel()
         playJob = null
         soundPool.autoPause()
@@ -108,13 +108,7 @@ class VoicePackPlayer(
     }
 
     /** Stop only when [priority] owns the utterance currently playing. */
-    fun stop(priority: Int) {
+    override fun stop(priority: Int) {
         if (playingPriority == priority) stop()
-    }
-
-    enum class PlayResult {
-        Played,
-        Unsupported,
-        Dropped,
     }
 }

@@ -90,15 +90,24 @@
             android:name=".alarm.AlarmReceiver"
             android:exported="false" />
 
-        <!-- Re-books wall-clock alarms after reboot, manual time changes,
-             or timezone changes, including while our process is dead. -->
+        <!-- Re-books alarms after a reboot (AlarmManager forgets them). -->
         <receiver
             android:name=".alarm.BootReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.TIME_SET" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Re-books alarms when the zone or wall clock moves: an alarm is a
+             LOCAL hour/minute, but AlarmManager holds an absolute instant, so
+             the booked moment is wrong in the new zone until recomputed. -->
+        <receiver
+            android:name=".alarm.TimeChangeReceiver"
+            android:exported="false">
+            <intent-filter>
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
             </intent-filter>
         </receiver>
     </application>

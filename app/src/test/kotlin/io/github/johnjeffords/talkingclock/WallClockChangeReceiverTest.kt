@@ -3,7 +3,7 @@ package io.github.johnjeffords.talkingclock
 import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.test.core.app.ApplicationProvider
-import io.github.johnjeffords.talkingclock.alarm.BootReceiver
+import io.github.johnjeffords.talkingclock.alarm.TimeChangeReceiver
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -38,7 +38,7 @@ class WallClockChangeReceiverTest {
 
             assertTrue(
                 "$action did not resolve to the alarm rescheduler",
-                receivers.any { it.activityInfo.name == BootReceiver::class.java.name },
+                receivers.any { it.activityInfo.name == TimeChangeReceiver::class.java.name },
             )
         }
     }

@@ -192,7 +192,7 @@ class TimerControllerTest {
         controller.start(Duration.ofHours(60))
         runCurrent()
 
-        assertEquals(listOf("Timer started: 60 hours"), speaker.spoken)
+        assertEquals(listOf("Timer started: sixty hours"), speaker.spoken)
         assertEquals(TimerEngine.Phase.Running, controller.state.value.snapshot.phase)
         assertEquals(1, servicePokes)
     }
