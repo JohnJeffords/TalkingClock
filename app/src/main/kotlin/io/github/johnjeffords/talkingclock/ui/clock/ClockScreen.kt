@@ -33,12 +33,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.johnjeffords.talkingclock.R
+import io.github.johnjeffords.talkingclock.data.SettingsRepository
 import io.github.johnjeffords.talkingclock.domain.announce.SpeakInterval
 import io.github.johnjeffords.talkingclock.domain.time.ClockReadout
 import io.github.johnjeffords.talkingclock.speech.SpeakerState
 import io.github.johnjeffords.talkingclock.ui.components.NoSpeechEngineCard
 import io.github.johnjeffords.talkingclock.ui.theme.ClockHeroTextStyle
 import io.github.johnjeffords.talkingclock.ui.theme.ClockSecondsTextStyle
+import io.github.johnjeffords.talkingclock.ui.theme.SevenSegmentFontFamily
 import java.time.Duration
 
 /**
@@ -140,6 +142,16 @@ private fun ColumnScope.ClockContent(
     // deliberately NOT a live region (announcing every second would be
     // unbearable; users tap to hear the time).
     val spokenLabel = buildTimeContentDescription(readout)
+    val heroStyle = if (uiState.clockStyle == SettingsRepository.ClockStyle.SevenSegment) {
+        ClockHeroTextStyle.copy(fontFamily = SevenSegmentFontFamily)
+    } else {
+        ClockHeroTextStyle
+    }
+    val secondsStyle = if (uiState.clockStyle == SettingsRepository.ClockStyle.SevenSegment) {
+        ClockSecondsTextStyle.copy(fontFamily = SevenSegmentFontFamily)
+    } else {
+        ClockSecondsTextStyle
+    }
     Row(
         verticalAlignment = Alignment.Bottom,
         modifier = Modifier
@@ -148,14 +160,14 @@ private fun ColumnScope.ClockContent(
     ) {
         Text(
             text = readout?.time ?: "",
-            style = ClockHeroTextStyle,
+            style = heroStyle,
             color = MaterialTheme.colorScheme.onSurface,
         )
         readout?.seconds?.let { seconds ->
             Spacer(Modifier.width(8.dp))
             Text(
                 text = seconds,
-                style = ClockSecondsTextStyle,
+                style = secondsStyle,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 10.dp),
             )

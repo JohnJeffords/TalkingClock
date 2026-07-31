@@ -11,7 +11,6 @@ import io.github.johnjeffords.talkingclock.data.SettingsRepository
 import io.github.johnjeffords.talkingclock.domain.announce.SpeakInterval
 import io.github.johnjeffords.talkingclock.domain.time.ClockReadout
 import io.github.johnjeffords.talkingclock.domain.time.SecondTicker
-import io.github.johnjeffords.talkingclock.domain.time.SystemZoneClock
 import io.github.johnjeffords.talkingclock.domain.time.TimeFormatter
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,6 +37,7 @@ import java.util.Locale
 data class ClockUiState(
     val readout: ClockReadout? = null,
     val showDate: Boolean = true,
+    val clockStyle: SettingsRepository.ClockStyle = SettingsRepository.ClockStyle.Default,
     val armedInterval: SpeakInterval? = null,
     val nextIn: Duration? = null,
     val autoOffIn: Duration? = null,
@@ -91,6 +91,7 @@ class ClockViewModel(
             ClockUiState(
                 readout = TimeFormatter.format(now, use24Hour, settings.showSeconds, locale),
                 showDate = settings.showDate,
+                clockStyle = settings.clockStyle,
                 armedInterval = armed.interval,
                 nextIn = armed.nextAt?.let { remainingUntil(now, it) },
                 autoOffIn = armed.autoOffAt?.let { remainingUntil(now, it) },
@@ -127,8 +128,7 @@ class ClockViewModel(
             initializer {
                 val app = this[APPLICATION_KEY] as TalkingClockApp
                 ClockViewModel(
-                    // Follows time-zone changes; see SystemZoneClock.
-                    clock = SystemZoneClock,
+                    clock = app.wallClock,
                     locale = Locale.getDefault(),
                     speakingClock = app.speakingClockController,
                     settingsFlow = app.settingsRepository.settings,

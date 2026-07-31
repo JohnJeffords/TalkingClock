@@ -17,8 +17,10 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.johnjeffords.talkingclock.data.SettingsRepository
 import io.github.johnjeffords.talkingclock.domain.time.ClockReadout
 import io.github.johnjeffords.talkingclock.ui.theme.NumericFontFamily
+import io.github.johnjeffords.talkingclock.ui.theme.SevenSegmentFontFamily
 
 /**
  * Nightstand mode (design frame 04): a dark-bedroom presentation of the
@@ -35,6 +37,7 @@ import io.github.johnjeffords.talkingclock.ui.theme.NumericFontFamily
 @Composable
 fun NightstandScreen(
     readout: ClockReadout?,
+    clockStyle: SettingsRepository.ClockStyle,
     onExit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -67,7 +70,11 @@ fun NightstandScreen(
     ) {
         Text(
             text = readout?.time ?: "",
-            fontFamily = NumericFontFamily,
+            fontFamily = if (clockStyle == SettingsRepository.ClockStyle.SevenSegment) {
+                SevenSegmentFontFamily
+            } else {
+                NumericFontFamily
+            },
             fontWeight = FontWeight.Medium,
             fontSize = 104.sp,
             color = NightRed,

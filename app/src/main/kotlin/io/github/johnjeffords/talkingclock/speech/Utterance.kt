@@ -72,4 +72,7 @@ interface Announcer {
 
     /** Stop mid-utterance (both pack playback and TTS). */
     fun stop()
+
+    /** Stop only an utterance owned by [priority]. */
+    fun stop(priority: Int)
 }

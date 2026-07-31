@@ -1,7 +1,14 @@
 package io.github.johnjeffords.talkingclock
 
 import android.app.Application
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import android.os.SystemClock
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import androidx.core.content.ContextCompat
 import io.github.johnjeffords.talkingclock.alarm.AlarmRinger
 import io.github.johnjeffords.talkingclock.alarm.AlarmScheduler
 import io.github.johnjeffords.talkingclock.announce.SpeakingClockController
@@ -26,6 +33,7 @@ import io.github.johnjeffords.talkingclock.voicepack.VoicePackPlayer
 import io.github.johnjeffords.talkingclock.voicepack.VoicePackStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -33,6 +41,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import java.time.Clock
 import java.time.Duration
 import java.time.LocalTime
 
@@ -105,8 +114,18 @@ class TalkingClockApp : Application() {
     var currentSettings: SettingsRepository.Settings = SettingsRepository.Settings()
         private set
 
-    /** Process-lifetime scope for announce loops and settings plumbing. */
-    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    /** Wall clock shared by display and speech; its system zone is dynamic. */
+    internal var wallClock: Clock = SystemZoneClock
+
+    /**
+     * Process-lifetime scope for controllers and settings plumbing. Keeping it
+     * on Main serializes tick-loop engine reads with UI/controller mutations.
+     */
+    internal var appScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    /** Completion handle for the ordered process-start initialization. */
+    internal lateinit var initializationJob: Job
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -115,13 +134,10 @@ class TalkingClockApp : Application() {
         ttsSpeaker = TtsSpeaker.create(this)
         speaker = ttsSpeaker
         voicePackStore = VoicePackStore(this)
-        announcer = SpeechAnnouncer(speaker) { activePackPlayer }
+        announcer = SpeechAnnouncer(speaker, ::buzzForAnnouncement) { activePackPlayer }
 
         speakingClockController = SpeakingClockController(
-            // Re-reads the device zone per call, so announcements follow a
-            // time-zone change instead of speaking the old local time until
-            // the process restarts (SystemZoneClock).
-            clock = SystemZoneClock,
+            clock = wallClock,
             announcer = announcer,
             scope = appScope,
             ensureServiceRunning = { AnnouncerService.ensureRunning(this) },
@@ -165,7 +181,7 @@ class TalkingClockApp : Application() {
                 }
             },
             onArmSpeakingClock = { alarm ->
-                // The signature feature: the moment the alarm rings, the
+                // The signature feature: when the alarm is dismissed, the
                 // speaking clock starts and runs while the user gets ready
                 // (design frame 24's amber card). Auto-off ends it.
                 alarm.handoffIntervalSeconds?.let { seconds ->
@@ -175,27 +191,49 @@ class TalkingClockApp : Application() {
                     )
                 }
             },
-            onQuietSpeakingClock = {
-                // Snooze silences the handoff clock until the next ring.
-                speakingClockController.disarm()
+        )
+
+        ContextCompat.registerReceiver(
+            this,
+            WallClockChangeReceiver(::handleWallClockChanged),
+            IntentFilter().apply {
+                addAction(Intent.ACTION_TIME_CHANGED)
+                addAction(Intent.ACTION_TIMEZONE_CHANGED)
             },
+            ContextCompat.RECEIVER_NOT_EXPORTED,
         )
 
         wireQuietHours()
-        wireSettingsIntoConsumers()
-        // ORDER MATTERS. The persistence collectors' very first emission is
-        // the controllers' initial Idle, which CLEARS the saved keys — so it
-        // must not run until restore has read them, or an interrupted run is
-        // erased on the way back. Settings go first for the same reason:
-        // a restored run latches the user's real speech lead, not zero.
-        appScope.launch {
+        initializationJob = appScope.launch {
+            // Settings (especially speech lead) must be applied before a
+            // restored run latches them, and restore must finish before an
+            // initial Idle emission is allowed to clear the saved state.
             applySettings(settingsRepository.settings.first())
             restoreSavedState()
             wireEnginePersistence()
-            // Re-sync AlarmManager with the stored alarms at every process
-            // start (cheap, idempotent, and covers app-update process
-            // restarts that BootReceiver doesn't).
+            wireSettingsIntoConsumers()
             alarmScheduler.rescheduleAll(alarmRepository.alarms.first())
+        }
+    }
+
+    /** Re-align all local wall-clock work after a time or zone change. */
+    private fun handleWallClockChanged() {
+        speakingClockController.realign()
+    }
+
+    /** Short confirmation for spoken cues; alarms own their vibration separately. */
+    private fun buzzForAnnouncement(priority: Int) {
+        if (!currentSettings.hapticFeedback || priority == Speaker.PRIORITY_ALARM) return
+        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            (getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            getSystemService(VIBRATOR_SERVICE) as Vibrator
+        }
+        if (vibrator.hasVibrator()) {
+            vibrator.vibrate(
+                VibrationEffect.createOneShot(20, VibrationEffect.DEFAULT_AMPLITUDE),
+            )
         }
     }
 
@@ -222,7 +260,7 @@ class TalkingClockApp : Application() {
     /** One collector pushes each settings change to every consumer. */
     private fun wireSettingsIntoConsumers() {
         settingsRepository.settings
-            .onEach { applySettings(it) }
+            .onEach(::applySettings)
             .launchIn(appScope)
     }
 

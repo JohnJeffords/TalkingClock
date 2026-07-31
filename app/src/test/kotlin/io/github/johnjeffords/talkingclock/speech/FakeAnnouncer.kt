@@ -22,6 +22,8 @@ class FakeAnnouncer : Announcer {
     var stopCount = 0
         private set
 
+    val stoppedPriorities = mutableListOf<Int>()
+
     override fun announce(utterance: Utterance, priority: Int) {
         utterances += utterance
         spoken += utterance.toText()
@@ -30,5 +32,10 @@ class FakeAnnouncer : Announcer {
 
     override fun stop() {
         stopCount++
+    }
+
+    override fun stop(priority: Int) {
+        stopCount++
+        stoppedPriorities += priority
     }
 }

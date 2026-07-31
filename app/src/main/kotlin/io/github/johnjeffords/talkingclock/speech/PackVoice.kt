@@ -36,4 +36,7 @@ interface PackVoice {
 
     /** Stop mid-utterance. */
     fun stop()
+
+    /** Stop only when [priority] owns the utterance currently playing. */
+    fun stop(priority: Int)
 }

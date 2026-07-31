@@ -2,6 +2,7 @@ package io.github.johnjeffords.talkingclock.announce
 
 import io.github.johnjeffords.talkingclock.domain.announce.SpeakInterval
 import io.github.johnjeffords.talkingclock.speech.FakeAnnouncer
+import io.github.johnjeffords.talkingclock.speech.Speaker
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -35,14 +36,18 @@ class SpeakingClockControllerTest {
     /** A [Clock] the test can push forward by hand. */
     private class MutableClock(
         private var current: Instant,
-        private val zone: ZoneId,
+        private var currentZone: ZoneId,
     ) : Clock() {
         fun advance(duration: Duration) {
             current += duration
         }
 
+        fun changeZone(zone: ZoneId) {
+            currentZone = zone
+        }
+
         override fun instant(): Instant = current
-        override fun getZone(): ZoneId = zone
+        override fun getZone(): ZoneId = currentZone
         override fun withZone(zone: ZoneId): Clock = MutableClock(current, zone)
     }
 
@@ -112,6 +117,7 @@ class SpeakingClockControllerTest {
         assertEquals(emptyList<String>(), speaker.spoken)
         assertFalse(controller.state.value.isArmed)
         assertNull(controller.state.value.nextAt)
+        assertEquals(listOf(Speaker.PRIORITY_CLOCK), speaker.stoppedPriorities)
         assertEquals(1, servicePokes) // armed once; the service stops itself
     }
 
@@ -165,5 +171,30 @@ class SpeakingClockControllerTest {
         assertEquals(LocalDateTime.of(2000, 1, 1, 10, 5, 0), state.nextAt)
         assertEquals(startAt.plusMinutes(60), state.autoOffAt)
         assertEquals(1, servicePokes)
+    }
+
+    @Test
+    fun `timezone change realigns speech and preserves the auto-off instant`() = runTest {
+        val controller = buildController()
+        controller.arm(SpeakInterval(300))
+        runCurrent()
+
+        // The instant is unchanged, but local time jumps from 10:00 to 13:00.
+        clock.changeZone(ZoneOffset.ofHours(3))
+        controller.realign()
+        runCurrent()
+
+        assertEquals(
+            LocalDateTime.of(2000, 1, 1, 13, 5, 0),
+            controller.state.value.nextAt,
+        )
+        assertEquals(
+            LocalDateTime.of(2000, 1, 1, 14, 0, 7),
+            controller.state.value.autoOffAt,
+        )
+
+        advanceSeconds(4 * 60 + 53)
+        assertEquals(listOf("It's one oh five"), speaker.spoken)
+        assertTrue(controller.state.value.isArmed)
     }
 }

@@ -106,4 +106,9 @@ class VoicePackPlayer(
         stop()
         soundPool.release()
     }
+
+    /** Stop only when [priority] owns the utterance currently playing. */
+    override fun stop(priority: Int) {
+        if (playingPriority == priority) stop()
+    }
 }

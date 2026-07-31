@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.captureRoboImage
+import io.github.johnjeffords.talkingclock.data.SettingsRepository
 import io.github.johnjeffords.talkingclock.domain.announce.SpeakInterval
 import io.github.johnjeffords.talkingclock.domain.time.ClockReadout
 import io.github.johnjeffords.talkingclock.speech.SpeakerState
@@ -70,6 +71,15 @@ class ClockScreenScreenshotTest {
     @Test
     fun clockScreen_off_light() {
         capture(offState, ThemeChoice.Light, "src/test/screenshots/clock_off_light.png")
+    }
+
+    @Test
+    fun clockScreen_sevenSegment_dark() {
+        capture(
+            offState.copy(clockStyle = SettingsRepository.ClockStyle.SevenSegment),
+            ThemeChoice.Dark,
+            "src/test/screenshots/clock_seven_segment_dark.png",
+        )
     }
 
     @Test

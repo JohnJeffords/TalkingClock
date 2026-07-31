@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import io.github.johnjeffords.talkingclock.ui.rememberHapticAction
 
 /**
  * The building blocks of every settings screen: section headers, toggle
@@ -45,11 +46,12 @@ fun SettingsSwitchRow(
     onCheckedChange: (Boolean) -> Unit,
     subtitle: String? = null,
 ) {
+    val hapticChange = rememberHapticAction(onCheckedChange)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onCheckedChange(!checked) }
+            .clickable { hapticChange(!checked) }
             .padding(horizontal = 22.dp, vertical = 12.dp),
     ) {
         Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -64,7 +66,7 @@ fun SettingsSwitchRow(
                 )
             }
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(checked = checked, onCheckedChange = hapticChange)
     }
 }
 
@@ -76,11 +78,12 @@ fun SettingsNavRow(
     value: String?,
     onClick: () -> Unit,
 ) {
+    val hapticClick = rememberHapticAction(onClick)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(onClick = hapticClick)
             .padding(horizontal = 22.dp, vertical = 14.dp),
     ) {
         Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)

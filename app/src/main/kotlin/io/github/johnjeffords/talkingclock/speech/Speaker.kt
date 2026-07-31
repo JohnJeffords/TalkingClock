@@ -37,6 +37,9 @@ interface Speaker {
     /** Stop mid-utterance (e.g. the user hit Stop). No-op when silent. */
     fun stop()
 
+    /** Stop only when the current utterance belongs to [priority]. */
+    fun stop(priority: Int)
+
     /** Release the engine. Call when the owning scope is done with speech. */
     fun shutdown()
 
@@ -49,6 +52,9 @@ interface Speaker {
 
         /** Timer cues — checkpoints, the countdown, "Time's up" — win. */
         const val PRIORITY_TIMER = 2
+
+        /** Alarm announcements take precedence over every ambient feature. */
+        const val PRIORITY_ALARM = 3
     }
 }
 

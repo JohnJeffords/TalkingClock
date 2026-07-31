@@ -27,6 +27,8 @@ class FakeSpeaker(
     var stopCount = 0
         private set
 
+    val stoppedPriorities = mutableListOf<Int>()
+
     override fun speak(text: String, priority: Int) {
         // Mirror the real contract: drop unless Ready. (The fake records
         // rather than plays, so the priority collision rule doesn't apply —
@@ -39,6 +41,11 @@ class FakeSpeaker(
 
     override fun stop() {
         stopCount++
+    }
+
+    override fun stop(priority: Int) {
+        stopCount++
+        stoppedPriorities += priority
     }
 
     override fun shutdown() = Unit
