@@ -3,6 +3,30 @@
 Short ADR-style records. Newest first. "Owner" = project owner (John),
 "CC" = Claude Code.
 
+## 2026-07-28 — D-021: Recover from a system speech-engine change automatically, don't ask the user to restart
+Owner bug report from a real device: after switching the system TTS away from
+SherpaTTS, the app "just stops working". Cause: one long-lived `TextToSpeech`
+bound to the engine that was default at process start, with no way to learn
+the default had moved.
+
+Options considered: (a) tell the user to restart the app when speech dies —
+rejected, the audience is people with time blindness and the app's core
+promise is "never silently stop announcing"; (b) rebuild the engine on every
+`Activity.onResume` — rejected, it misses the case that matters most (the
+switch happening while only the announcer service is alive, screen off) and
+churns the binding for users who never touch engine settings; (c) **watch
+`Settings.Secure.TTS_DEFAULT_SYNTH` and rebuild when it actually changes,
+plus rebuild when `speak()` reports `ERROR`** — adopted. It needs no
+permission, no INTERNET, fires whether the app is foreground or background,
+and the `speak()` check also covers the engine being uninstalled or updated
+without the setting changing.
+
+Deliberately NOT done: setting an explicit `Locale` on the engine. The app
+has never called `setLanguage`, so a language mismatch is not part of this
+bug, and forcing a locale an engine reports as unsupported risks silencing
+setups that work today. Revisit if a user reports the wrong language after an
+engine switch. (CC investigation, owner-reported bug.)
+
 ## 2026-07-16 — D-020: Scope expanded to 4 tools incl. Alarms (reverses D-001) — sequenced last, permission cost flagged
 The owner's Claude Design handoff adds a full **Alarm** feature (list / edit /
 ringing), **Quiet Hours**, and speaking-clock **auto-off**, making the app

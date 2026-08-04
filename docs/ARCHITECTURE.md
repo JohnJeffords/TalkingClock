@@ -110,6 +110,18 @@ Phrasebook (pure text)  →  Speaker interface  →  TtsSpeaker (system TTS)
   UI reacts: the speak controls show a spinner during init and the
   "install a FOSS TTS engine" card on `NoEngine` (the GrapheneOS/CalyxOS
   default state).
+- **The engine binding is disposable, and rebuilt on demand.** A
+  `TextToSpeech` instance is welded for life to whichever engine was the
+  system default when it was constructed, and Android sends no notification
+  when that default moves — so an engine switch leaves the app talking to a
+  binding that may already be dead, with nothing thrown and no callback.
+  `TtsSpeaker` therefore watches `Settings.Secure.TTS_DEFAULT_SYNTH` with a
+  `ContentObserver` and rebuilds against the new default, and treats a
+  `TextToSpeech.speak()` that returns `ERROR` as "the engine app went away"
+  and rebuilds too. Rebuilding puts `state` back to `Initializing` (so the UI
+  stays honest) and re-applies the user's rate/pitch, which live on the
+  instance. The utterance that triggered a rebuild is dropped, never retried —
+  see the latency rule below. (D-021)
 - **Latency discipline**: engine warm-up (`speak("")`-style priming) when a
   speaking feature is armed; countdown numbers are queued as separate
   utterances ahead of time with `QUEUE_ADD` so 5-4-3-2-1 lands on the beat.
